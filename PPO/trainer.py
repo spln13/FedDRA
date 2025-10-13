@@ -26,19 +26,51 @@ class DualStreamPPO:
     # ---------- 外部接口 ----------
 
     @torch.no_grad()
-    def select_actions(self, S_glob, S_cli, mask=None):
+    def select_actions(self, S_glob, S_cli, mask=None, prev_p: torch.Tensor = None):
         """
+        采样动作，并对剪枝率 p 做稳定化（可选）：
+          - 惯性（EMA）
+          - 滞回（小改动则保持不变）
+          - 分桶（量化到若干固定值）
         Args:
           S_glob: [B, d_glob]
           S_cli : [B, N, d_cli]
           mask  : [B, N]
+          prev_p: [B, N, 1] 或 None —— 上一轮已执行/下发的剪枝率；不传则与原始行为一致
         Returns:
           dict(p, E, logp, entropy)
         """
         S_glob = S_glob.to(self.device)
         S_cli = S_cli.to(self.device)
         mask = mask.to(self.device) if mask is not None else None
-        return self.net.select_actions(S_glob, S_cli, mask)
+
+        out = self.net.select_actions(S_glob, S_cli, mask)  # 原始采样
+        p_raw = out["p"]  # [B,N,1]
+
+        # ---------- 稳定化开始（仅在提供 prev_p 时生效） ----------
+        p_smooth = p_raw
+        if prev_p is not None:
+            prev_p = prev_p.to(self.device)
+
+            # 1) 惯性（EMA）
+            alpha = float(self.cfg.inertia_alpha)
+            p_smooth = alpha * p_raw + (1.0 - alpha) * prev_p
+
+            # 2) 滞回（小于阈值的不变）
+            eps = float(self.cfg.hysteresis_eps)
+            stay = (p_smooth - prev_p).abs() < eps
+            p_smooth = torch.where(stay, prev_p, p_smooth)
+
+        # 3) 分桶量化（可选）
+        K = int(getattr(self.cfg, "bucket_bins", 0) or 0)
+        if K > 1:
+            L, H = float(self.cfg.p_low), float(self.cfg.p_high)
+            step = (H - L) / (K - 1)
+            idx = torch.round((p_smooth - L) / (step + 1e-8)).clamp(0, K - 1)
+            p_smooth = idx * step + L
+
+        out["p"] = p_smooth.clamp(self.cfg.p_low, self.cfg.p_high)
+        return out
 
     def store_transition(self, transition: dict):
         """
