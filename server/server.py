@@ -269,5 +269,6 @@ class Server(object):
         ratio = 1. / client_num
         for client in self.clients:
             client_model = client.model
+            client_model = client_model.to(self.device)
             for server_param, client_param in zip(server_model.parameters(), client_model.parameters()):
                 server_param.data += client_param.data.clone() * ratio
