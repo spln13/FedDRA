@@ -199,6 +199,8 @@ class Client(object):
 
     def prune(self, model, pruning_rate):
         """从一个完整模型剪枝到剪枝率=pruning_rate模型"""
+        if pruning_rate == 0.:
+            return model
         mask = model.mask
         total = 0
         for layer_mask in mask:
