@@ -263,6 +263,7 @@ class Server(object):
 
     def fedavg_aggregate(self):
         server_model = self.server_model
+        server_model = server_model.to(self.device)
         for param in server_model.parameters():
             param.data.zero_()
         client_num = len(self.clients)
@@ -272,3 +273,4 @@ class Server(object):
             client_model = client_model.to(self.device)
             for server_param, client_param in zip(server_model.parameters(), client_model.parameters()):
                 server_param.data += client_param.data.clone() * ratio
+        self.server_model = server_model
