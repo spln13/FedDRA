@@ -35,6 +35,6 @@ class DualStreamConfig:
     wE: float = 0.5  # E-Value 权重
 
     # --- action stability ---
-    inertia_alpha: float = 0.6      # EMA 惯性系数, 0=完全沿用旧值, 1=完全用新值
+    inertia_alpha: float = 0.3      # EMA 惯性系数, 0=完全沿用旧值, 1=完全用新值
     hysteresis_eps: float = 0.07    # 滞回阈值: 小于该改变量则保持不变
     bucket_bins: int = 0            # 分桶个数(0=不分桶); 例如设 6 表示把区间等分为 6 桶

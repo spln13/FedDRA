@@ -167,9 +167,10 @@ class Server(object):
         server_model = self.server_model
         for param in server_model.parameters():
             param.data.zero_()  # 将簇模型参数都设置为0
-
+        client_models = []
         for client in self.clients:
             client_model = client.load_model()
+            client_models.append(client_model)
             client_mask = client_model.mask
             ratio = 1. / len(self.clients)  # ratio 为 1 / n
             layer_idx_in_mask = 0
@@ -213,4 +214,40 @@ class Server(object):
         # 此时cluster_model已完成异构模型聚合
         # 每个client根据自己的模型结构，从cluster_model中获取子模型
         self.server_model = server_model
-
+        for i, client in enumerate(self.clients):
+            client_model = client_models[i]
+            client_mask = client_model.mask
+            layer_idx_in_mask = 0
+            if self.dataset == 'MNIST' or self.dataset == 'emnist_noniid':
+                start_mask_client = torch.ones(1).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
+            else:
+                start_mask_client = torch.ones(3).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
+            end_mask_client = torch.tensor(client_mask[layer_idx_in_mask], dtype=torch.int).bool()
+            for client_layer, server_layer in zip(client_model.modules(), server_model.modules()):
+                start_indices = [i for i, x in enumerate(start_mask_client) if x]
+                end_indices = [i for i, x in enumerate(end_mask_client) if x]
+                if isinstance(client_layer, nn.BatchNorm2d):
+                    # with torch.no_grad():
+                    #     client_layer.weight.data = cluster_layer.weight.data[end_indices].clone()
+                    #     client_layer.bias.data = cluster_layer.bias.data[end_indices].clone()
+                    # client_layer.running_mean.data = cluster_layer.running_mean.data[end_indices].clone()
+                    # client_layer.running_var.data = cluster_layer.running_var.data[end_indices].clone()
+                    layer_idx_in_mask += 1
+                    start_mask_client = end_mask_client[:]
+                    if layer_idx_in_mask < len(client_mask):
+                        end_mask_client = client_mask[layer_idx_in_mask]
+                if isinstance(client_layer, nn.Linear):
+                    m0 = server_layer.weight.data[end_indices, :].clone()
+                    with torch.no_grad():
+                        client_layer.weight.data = m0[:, start_indices].clone()
+                        client_layer.bias.data = server_layer.bias.data[end_indices].clone()
+                    layer_idx_in_mask += 1
+                    start_mask_client = end_mask_client[:]
+                    if layer_idx_in_mask < len(client_mask):
+                        end_mask_client = client_mask[layer_idx_in_mask]
+                if isinstance(client_layer, nn.Conv2d):
+                    m0 = server_layer.weight.data[end_indices, :, :, :].clone()
+                    with torch.no_grad():
+                        client_layer.weight.data = m0[:, start_indices].clone()
+            # 存储client_model
+            client.model = client_model
