@@ -30,16 +30,16 @@ class Server(object):
 
     def do(self):
         self.generate_next_round_params()  # 收集上一轮FL指标
-        self.aggregate()  # 聚合模型
-        self.generate_client_model()  # 为client生成下一轮的模型
+        self.aggregate()  # 聚合模型，生成server_model
+        self.send_model_to_clients()  # 下发模型到各client
 
 
-    def generate_client_model(self):
+    def send_model_to_clients(self):
         """
-        收集各client的剪枝率，生成每个client下一轮的模型
+        每个client接受聚合后的模型
         """
         for client in self.clients:
-            pass
+            client.aggregated_model = self.server_model
 
 
 
