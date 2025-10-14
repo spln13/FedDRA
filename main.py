@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 
 from server.server import Server
@@ -10,13 +12,31 @@ def fedAvg():
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    pass
+    server = Server(device, client_nums, model_name, dataset)
+    fl_rounds = 500
+    clients = []
+    for i in range(client_nums):
+        client = Client(i, device, model_name, 1, dataset, 16, batch_norm=False)
+        clients.append(client)
+    server.clients = clients
+    print("fedAvg Start Training...")
+    for r in range(fl_rounds):
+        print(f"--- FL Round {r} ---")
+        server.fedavg_do()  # 每一轮的逻辑包在server内实现
+
+    final_acc = []
+    for c in clients:
+        acc = c.test()
+        final_acc.append(acc)
+        print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
+
+    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
 
 
 def fedDRA():
 
-    client_nums = 3
-    fl_rounds = 100
+    client_nums = 20
+    fl_rounds = 500
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -45,15 +65,32 @@ def fedDRA():
     for c in clients:
         acc = c.test()
         final_acc.append(acc)
-        print("Client {} Test Acc: {:.2f}%".format(c.id, acc * 100))
+        print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
-    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc) * 100))
+    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
 
 
 def main():
     # 需要加一些参数处理
-    fedDRA()
+    parser = argparse.ArgumentParser(description="Federated Learning Runner")
+    parser.add_argument(
+        "--algo",
+        type=str,
+        default="fedDRA",
+        choices=["fedDRA", "fedAvg"],
+        help="选择要运行的算法: fedDRA 或 fedAvg (默认: fedDRA)"
+    )
 
+    args = parser.parse_args()
+
+    if args.algo.lower() == "fedavg":
+        print("Running FedAvg...")
+        fedAvg()
+    elif args.algo.lower() == "feddra":
+        print("Running FedDRA...")
+        fedDRA()
+    else:
+        raise ValueError(f"未知算法: {args.algo}")
 
 
 if __name__ == '__main__':

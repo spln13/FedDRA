@@ -251,3 +251,11 @@ class Server(object):
                         client_layer.weight.data = m0[:, start_indices].clone()
             # 存储client_model
             client.model = client_model
+
+
+    def fedavg_do(self):
+        for client in self.clients:
+            client.fedavg_do()
+        self.aggregate()
+        for client in self.clients:
+            client.model = self.server_model

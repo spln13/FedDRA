@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 class Client(object):
-    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001, base_dir="./dataset"):
+    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001, base_dir="./dataset", batch_norm=True):
         self.id = client_id
         self.device = device
         self.model_name = model_name
@@ -23,7 +23,7 @@ class Client(object):
         self.last_pruning_rate = 0.
         self.cur_pruning_rate = 0.
         self.training_epochs_for_prune = 10
-        self.model = self._build_model()  # client自己的模型
+        self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
         self.aggregated_model = self._build_model()  # 聚合后的全局模型
         self.last_acc = 0.
         self.base_dir = base_dir
@@ -53,9 +53,9 @@ class Client(object):
         self.round += 1
         return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss
 
-    def _build_model(self):
+    def _build_model(self, batch_norm=True):
         if self.model_name == 'MiniVGG':
-            model = MiniVGG(dataset=self.dataset_name)
+            model = MiniVGG(dataset=self.dataset_name, batch_norm=batch_norm)
             return model
         else:
             raise NotImplementedError
@@ -358,3 +358,34 @@ class Client(object):
     def load_local_test_data(self, batch_size: int = 64, num_workers: int = 2) -> DataLoader:
         ds = NpzArrayDataset(self._npz_path("local_test"), self.dataset_name, train=False)
         return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+
+
+
+    def fedavg_do(self):
+        # 训练少轮次，更新bn参数供剪枝算法使用
+        model = self.model
+        epochs = 1
+        model = model.to(self.device)
+        train_loader = self.load_train_data()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
+        criterion = nn.CrossEntropyLoss()
+        losses = []  # ✅ 用于存储所有batch的loss
+
+        for epoch in range(epochs):
+            if epoch in [int(epochs * 0.5), int(epochs * 0.75)]:
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] *= 0.1
+            # training
+            model.train()
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            for batch_idx, (data, target) in train_loader_tqdm:
+                data, target = data.to(self.device), target.to(self.device)
+                optimizer.zero_grad()
+                output = model(data)
+                loss = criterion(output, target)
+                losses.append(loss.item())  # ✅ 记录每个batch的loss
+
+                loss.backward()
+                optimizer.step()
+                train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
+        self.model = model
