@@ -1,38 +1,60 @@
 import torch
 
-from server import server
-from client import client
+from server.server import Server
+from client.client import Client
 
 
-
-
-
-def do():
-    # 联邦学习主流程
+def fedAvg():
+    # 这里弄fedavg的算法流程
+    client_nums = 20
+    model_name = 'MiniVGG'
+    dataset = 'cifar10'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     pass
 
 
+def fedDRA():
 
-def main():
-    # server.init()
-    # init clients
-    # 这里定义一些联邦学习的参数
-    client_nums = 20
+    client_nums = 3
+    fl_rounds = 100
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # ppo related
-    d_glob = 6
-    d_cli = 7
-    p_low = 0.2
-    p_high = 0.9
-    E_min = 1
-    E_max = 5
-    hidden = 256
+    d_glob = 6  # 全局特征维度
+    d_cli = 7  # client侧特征维度
+    p_low = 0.2  # 最低剪枝率
+    p_high = 0.8  # 最高剪枝率
+    E_min = 1  # 最小训练轮次
+    E_max = 5  # 最大训练轮次
+    hidden = 256  # PPO网络隐藏层维度
+    server = Server(device, client_nums, model_name, dataset, d_glob, d_cli, p_low, p_high, E_min, E_max, hidden)
+    clients = []
+    for i in range(client_nums):
+        client = Client(i, device, model_name, 1, dataset, 16)
+        clients.append(client)
+    server.clients = clients
 
-    # init server
+    print("fedDRA Start Training...")
+    for r in range(fl_rounds):
+        print(f"--- FL Round {r} ---")
+        server.do()  # 每一轮的逻辑包在server内实现
+
+    final_acc = []
+    for c in clients:
+        acc = c.test()
+        final_acc.append(acc)
+        print("Client {} Test Acc: {:.2f}%".format(c.id, acc * 100))
+
+    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc) * 100))
 
 
-    pass
+def main():
+    # 需要加一些参数处理
+    fedDRA()
 
+
+
+if __name__ == '__main__':
+    main()

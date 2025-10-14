@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 class Client(object):
-    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.0001, base_dir="./dataset"):
+    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001, base_dir="./dataset"):
         self.id = client_id
         self.device = device
         self.model_name = model_name
@@ -20,9 +20,8 @@ class Client(object):
         self.training_intensity = training_intensity
         self.batch_size = batch_size
         self.s = s
-        self.current_pr = 1.
-        self.last_pruning_rate = 0.
-        self.cur_pruning_rate = 0.
+        self.last_pruning_rate = 1.
+        self.cur_pruning_rate = 1.
         self.training_epochs_for_prune = 10
         self.model = self._build_model()  # client自己的模型
         self.aggregated_model = self._build_model()  # 聚合后的全局模型
@@ -51,6 +50,7 @@ class Client(object):
                                                                                          entropy, local_data_size,
                                                                                          self.cur_pruning_rate,
                                                                                          self.training_intensity))
+        self.round += 1
         return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss
 
     def _build_model(self):
@@ -199,7 +199,6 @@ class Client(object):
 
     def prune(self, model, pruning_rate):
         """从一个完整模型剪枝到剪枝率=pruning_rate模型"""
-        model.generate_mask()
         mask = model.mask
         total = 0
         for layer_mask in mask:
@@ -245,7 +244,7 @@ class Client(object):
                 new_cfg.append('M')
         model.cfg = new_cfg
         model.mask = new_cfg_mask
-        new_model = MiniVGG(cfg=new_cfg, dataset=self.dataset).to(self.device)
+        new_model = MiniVGG(cfg=new_cfg, dataset=self.dataset_name).to(self.device)
         layer_id_in_cfg = 0
         start_mask = torch.ones(3)  # 当前layer_id的层开始时的通道 cifar初始三个输入通道全部保留
         end_mask = new_cfg_mask[layer_id_in_cfg]  # 当前layer_id的层结束时的通道
@@ -337,6 +336,9 @@ class Client(object):
                                                                     len(test_loader.dataset),
                                                                     100. * correct / len(
                                                                         test_loader.dataset)))
+        acc = 100. * correct / len(test_loader.dataset)
+        return acc
+
 
     def _npz_path(self, split: str) -> str:
         return os.path.join(self.base_dir, self.dataset_name, split, f"{self.id}.npz")

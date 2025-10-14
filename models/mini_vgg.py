@@ -19,6 +19,7 @@ class MiniVGG(nn.Module):
         # 假设最后一个卷积层输出为 64 通道，我们进行两次 2x2 最大池化
         # 输入图像大小从 32x32 减少到 8x8
         self.classifier = nn.Linear(self.cfg[-1], num_classes)
+        self._generate_mask()
         if init_weights:
             self._initialize_weights()
 
@@ -54,7 +55,7 @@ class MiniVGG(nn.Module):
         return x
 
 
-    def generate_mask(self):
+    def _generate_mask(self):
         # 生成模型mask
         mask = []  # 初始mask生成全1
         # for item in cfg:
