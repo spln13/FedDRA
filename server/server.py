@@ -38,8 +38,9 @@ class Server(object):
         """
         每个client接受聚合后的模型
         """
+        state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
         for client in self.clients:
-            client.aggregated_model = self.server_model
+            client.aggregated_model.load_state_dict(state)
 
 
 
@@ -257,9 +258,9 @@ class Server(object):
         for client in self.clients:
             client.fedavg_do()
         self.fedavg_aggregate()
+        state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
         for client in self.clients:
-            client.model = self.server_model
-
+            client.model.load_state_dict(state)
 
     def fedavg_aggregate(self):
         server_model = self.server_model
