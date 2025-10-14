@@ -144,7 +144,7 @@ class Server(object):
 
         for i, client in enumerate(self.clients):
             client.cur_pruning_rate = float(p_next[i])
-            client.epochs = int(E_next[i])
+            client.training_intensity = int(E_next[i])
             # 可选：把“下发时的 logp”缓存到 client 或 server 的某处，用于下一轮严格 on-policy
             print("Round {} Client {} next pruning rate: {:.4f}, epochs: {}".format(self.round_id, client.id, p_next[i], E_next[i]))
             client.last_action_logp = float(out_next["logp"][0, i].item())

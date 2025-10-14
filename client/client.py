@@ -20,8 +20,8 @@ class Client(object):
         self.training_intensity = training_intensity
         self.batch_size = batch_size
         self.s = s
-        self.last_pruning_rate = 1.
-        self.cur_pruning_rate = 1.
+        self.last_pruning_rate = 0.
+        self.cur_pruning_rate = 0.
         self.training_epochs_for_prune = 10
         self.model = self._build_model()  # client自己的模型
         self.aggregated_model = self._build_model()  # 聚合后的全局模型
@@ -40,7 +40,7 @@ class Client(object):
             print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
             self.train_for_prune()  # 使用本地数据训练一下全局模型，更新bn参数
             self.model = self.prune(self.aggregated_model, self.cur_pruning_rate)
-
+            self.train_for_prune()
 
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         self.last_pruning_rate = self.cur_pruning_rate
