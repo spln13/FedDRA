@@ -8,7 +8,7 @@ from client.client import Client
 
 def fedAvg():
     # 这里弄fedavg的算法流程
-    client_nums = 20
+    client_nums = 5
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -23,6 +23,9 @@ def fedAvg():
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
         server.fedavg_do()  # 每一轮的逻辑包在server内实现
+        for c in clients:
+            acc = c.test()
+        print("Round {} Client {} Test Acc: {:.2f}%".format(r, c.id, acc))
 
     final_acc = []
     for c in clients:
