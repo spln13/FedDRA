@@ -45,7 +45,7 @@ class Client(object):
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         self.last_pruning_rate = self.cur_pruning_rate
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
-              "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}".format(self.round, self.id, acc,
+              "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}".format(self.id, self.round, acc,
                                                                                          total_time, avg_loss,
                                                                                          entropy, local_data_size,
                                                                                          self.cur_pruning_rate,
