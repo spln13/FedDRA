@@ -24,7 +24,7 @@ class Server(object):
                                            hidden=hidden)
 
         self.agent = DualStreamPPO(self.ppo_config)
-        self.ppo_update_every = 5
+        self.ppo_update_every = 3
         self.init_models_save_path = './init_models/'
         self.server_model = MiniVGG(dataset=self.dataset)
 
