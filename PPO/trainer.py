@@ -82,19 +82,19 @@ class DualStreamPPO:
 
     def ppo_update(self, epochs: int = 4, batch_size: int = 64, normalize_adv: bool = True):
         """
-        使用缓冲区收集的 on-policy 数据进行一次 PPO 更新
+        使用缓冲区收集的 on-policy 数据进行一次 PPO 更新（加入稳态改造）
         """
         # 1) GAE / returns
         self.buffer.compute_gae_and_returns(self.cfg.gamma, self.cfg.gae_lambda)
 
         # 2) 打包
-        S_glob = self.buffer.cat("S_glob")         # [T*B, d_glob]
-        S_cli = self.buffer.cat("S_cli")           # [T*B, N, d_cli]
+        S_glob = self.buffer.cat("S_glob")  # [T*B, d_glob]
+        S_cli = self.buffer.cat("S_cli")  # [T*B, N, d_cli]
         mask = self.buffer.cat("mask") if "mask" in self.buffer.data[0] else None
-        p = self.buffer.cat("p")                   # [T*B, N, 1]
-        E = self.buffer.cat("E")                   # [T*B, N, 1]
-        logp_old = self.buffer.cat("logp")         # [T*B, N]
-        V_old = self.buffer.cat("V")               # [T*B, N, 1]
+        p = self.buffer.cat("p")  # [T*B, N, 1]
+        E = self.buffer.cat("E")  # [T*B, N, 1]
+        logp_old = self.buffer.cat("logp")  # [T*B, N]
+        V_old = self.buffer.cat("V")  # [T*B, N, 1]
         R = self.buffer.returns.reshape(-1, *V_old.shape[1:])  # [T*B,N,1]
         A = (R - V_old).detach()
 
@@ -107,11 +107,11 @@ class DualStreamPPO:
         # 展平工具
         def flat(x):
             s = x.shape
-            if len(s) == 3:   # [TB,N,D]
+            if len(s) == 3:  # [TB,N,D]
                 return x.reshape(TB * N, s[-1])
-            elif len(s) == 2: # [TB,N]
+            elif len(s) == 2:  # [TB,N]
                 return x.reshape(TB * N)
-            else:             # [TB,N,1]
+            else:  # [TB,N,1]
                 return x.reshape(TB * N, 1)
 
         S_glob_rep = S_glob.unsqueeze(1).expand(TB, N, -1).reshape(TB * N, -1)
@@ -129,11 +129,19 @@ class DualStreamPPO:
         else:
             valid_idx = torch.arange(TB * N, device=self.device)
 
-        # 3) 小批次多 epoch 训练
+        # 3) 小批次多 epoch 训练（加入优势裁剪、Huber value、KL 早停与监控）
+        target_kl = getattr(self.cfg, "target_kl", 0.03)
+        last_approx_kl = torch.tensor(0.0, device=self.device)
+        last_clipfrac = torch.tensor(0.0, device=self.device)
+
         for _ in range(epochs):
             perm = valid_idx[torch.randperm(valid_idx.numel(), device=self.device)]
+            # 若上一个 epoch 已经 KL 超阈（极端情况），直接提前停
+            if last_approx_kl > target_kl:
+                break
+
             for i in range(0, perm.numel(), batch_size):
-                idx = perm[i:i+batch_size]
+                idx = perm[i:i + batch_size]
 
                 Sg_b = S_glob_rep[idx]
                 Sci_b = S_cli_eval.reshape(TB * N, -1)[idx].unsqueeze(1)  # [B,1,d_cli]
@@ -143,7 +151,7 @@ class DualStreamPPO:
                 E_b = E_f[idx].unsqueeze(-1)
                 logp_old_b = logp_old_f[idx]
                 R_b = R_f[idx]
-                A_b = A_f[idx]
+                A_b = A_f[idx].clamp(-10.0, 10.0)  # ← 新增：优势裁剪
 
                 out = self.net.evaluate_actions(Sg_b, Sci_b, p_b.unsqueeze(1), E_b, mask_b)
                 logp_new = out["logp"].squeeze(-1)
@@ -155,16 +163,17 @@ class DualStreamPPO:
                 surr2 = torch.clamp(ratio, 1 - self.cfg.clip_eps, 1 + self.cfg.clip_eps) * A_b.squeeze(-1)
                 loss_pi = -torch.min(surr1, surr2).mean()
 
-                # value-clip（使用近似旧值）
+                # value-clip + Huber（替换原 MSE）
                 V_old_b = V.detach()
                 V_clipped = V_old_b + (V - V_old_b).clamp(-self.cfg.clip_eps, self.cfg.clip_eps)
-                loss_v1 = (V - R_b.squeeze(-1)).pow(2)
-                loss_v2 = (V_clipped - R_b.squeeze(-1)).pow(2)
+                target = R_b.squeeze(-1)
+                loss_v1 = torch.nn.functional.smooth_l1_loss(V, target, reduction="none")
+                loss_v2 = torch.nn.functional.smooth_l1_loss(V_clipped, target, reduction="none")
                 loss_v = 0.5 * torch.max(loss_v1, loss_v2).mean()
 
                 loss_ent = -entropy.mean()
 
-                # 可选 KL
+                # 可选 KL 惩罚（保留）
                 loss_kl = torch.tensor(0.0, device=self.device)
                 if self.cfg.kl_coef > 0:
                     with torch.no_grad():
@@ -178,5 +187,22 @@ class DualStreamPPO:
                 nn.utils.clip_grad_norm_(self.net.parameters(), self.cfg.max_grad_norm)
                 self.opt.step()
 
+                # —— 监控 + KL 早停 ——（步后统计）
+                with torch.no_grad():
+                    approx_kl = (logp_old_b - logp_new).mean()
+                    clipfrac = ((ratio - 1.0).abs() > self.cfg.clip_eps).float().mean()
+                    last_approx_kl = approx_kl
+                    last_clipfrac = clipfrac
+
+                if approx_kl > target_kl:
+                    # 触发早停，并温和降低学习率一档（避免下一轮继续炸）
+                    for g in self.opt.param_groups:
+                        g['lr'] = max(g['lr'] * 0.5, 1e-6)
+                    break  # 跳出该 epoch 的剩余 batch
+
         # 4) 清空缓冲
         self.buffer.clear()
+
+        # 可选：打印监控
+        print(f"[PPO] KL={last_approx_kl.item():.4f} clipfrac={last_clipfrac.item():.3f}")
+

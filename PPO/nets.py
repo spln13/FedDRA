@@ -63,10 +63,20 @@ class TanhNormal:
     y = tanh(x), x ~ Normal(mu, sigma)，并映射到 [low, high]
     支持 sample() 与 log_prob()
     """
+
     def __init__(self, mu, log_std, low=0.1, high=0.9):
+        # ---- 数值兜底（新增） ----
+        mu = torch.nan_to_num(mu, nan=0.0, posinf=50.0, neginf=-50.0).clamp(-50.0, 50.0)
+        log_std = torch.nan_to_num(log_std, nan=-5.0, posinf=2.0, neginf=-20.0).clamp(-20, 2)
+
         self.mu = mu
-        self.log_std = log_std.clamp(-20, 2)
-        self.std = self.log_std.exp()
+        self.log_std = log_std
+        self.std = self.log_std.exp().clamp_min(1e-6)  # 防 0
+
+        # 严格检查（可留着调试期）
+        if not torch.isfinite(self.mu).all() or not torch.isfinite(self.std).all():
+            raise RuntimeError("[TanhNormal] invalid mu/std")
+
         self.base = Normal(self.mu, self.std)
         self.low = low
         self.high = high
@@ -196,14 +206,21 @@ class DualStreamActorCritic(nn.Module):
         """
         mu, log_std, logits_E, V = self.act_value(S_glob, S_cli, mask)
 
+        # —— 数值兜底（避免 NaN/Inf） ——
+        mu = torch.nan_to_num(mu, nan=0.0, posinf=50.0, neginf=-50.0).clamp(-50.0, 50.0)
+        log_std = torch.nan_to_num(log_std, nan=-5.0, posinf=2.0, neginf=-20.0).clamp(-20.0, 2.0)
+        logits_E = torch.nan_to_num(logits_E, nan=0.0).clamp(-20.0, 20.0)
+
+        # 连续动作 p：TanhNormal
         tn = TanhNormal(mu, log_std, low=self.cfg.p_low, high=self.cfg.p_high)
         logp_p = tn.log_prob(p)
 
-        probs_E = F.softmax(logits_E, dim=-1)
-        cat = Categorical(probs=probs_E)
-        E_idx = (E - self.cfg.E_min).clamp(0, self.num_E - 1).squeeze(-1)
+        # 离散动作 E：使用 logits 更稳
+        cat = Categorical(logits=logits_E)
+        # 将环境传回的 E ∈ [E_min, E_max] 映射到 [0, num_E-1]
+        E_idx = (E - self.cfg.E_min).clamp(0, self.num_E - 1).squeeze(-1).long()
         logp_E = cat.log_prob(E_idx)
-        entropy = tn.entropy + cat.entropy()
 
+        entropy = tn.entropy + cat.entropy()
         logp = logp_p + logp_E
         return dict(logp=logp, entropy=entropy, V=V)
