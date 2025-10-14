@@ -256,6 +256,18 @@ class Server(object):
     def fedavg_do(self):
         for client in self.clients:
             client.fedavg_do()
-        self.aggregate()
+        self.fedavg_aggregate()
         for client in self.clients:
             client.model = self.server_model
+
+
+    def fedavg_aggregate(self):
+        server_model = self.server_model
+        for param in server_model.parameters():
+            param.data.zero_()
+        client_num = len(self.clients)
+        ratio = 1. / client_num
+        for client in self.clients:
+            client_model = client.model
+            for server_param, client_param in zip(server_model.parameters(), client_model.parameters()):
+                server_param.data += client_param.data.clone() * ratio
