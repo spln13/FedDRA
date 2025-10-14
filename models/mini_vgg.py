@@ -84,6 +84,12 @@ class MiniVGG(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
+    def fill_bn(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(0.5)
+                m.bias.data.zero_()
+
 
 # 测试模型
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ class Client(object):
         # 3. 需要返回的指标:
         if self.cur_pruning_rate != self.last_pruning_rate:
             # 剪枝率不一致，需要重新剪枝
-            print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(self.round, self.id, self.last_pruning_rate, self.cur_pruning_rate))
+            print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
             self.train_for_prune()  # 使用本地数据训练一下全局模型，更新bn参数
             self.model = self.prune(self.aggregated_model, self.cur_pruning_rate)
 
@@ -214,6 +214,7 @@ class Client(object):
         y, i = torch.sort(bn)  # 对缩放因子 升序排列
         threshold_index = int(total * pruning_rate)
         threshold = y[threshold_index]  # 获得缩放因子门槛值，低于此门槛值的channel被prune掉
+        print("threshold: {:.4f}".format(threshold))
         pruned = 0
         new_cfg = []  # 每个bn层剩余的通道数或者是maxpooling层, 用于初始化模型
         new_cfg_mask = []  # 存储layer_mask数组
@@ -287,6 +288,7 @@ class Client(object):
     def train_for_prune(self, sr=True):
         # 训练少轮次，更新bn参数供剪枝算法使用
         model = self.aggregated_model
+        model.fill_bn()
         epochs = self.training_epochs_for_prune  # for剪枝训练强度
         model = model.to(self.device)
         train_loader = self.load_train_data()
@@ -315,7 +317,7 @@ class Client(object):
                         if isinstance(m, nn.BatchNorm2d):
                             m.weight.grad.data.add_(s * torch.sign(m.weight.data))  # L1
                 optimizer.step()
-                train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
+                train_loader_tqdm.set_description(f'Train For Prune Epoch: {epoch} Loss: {loss.item():.6f}')
 
         self.aggregated_model = model
 
