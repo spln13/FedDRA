@@ -12,7 +12,7 @@ def fedAvg():
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    server = Server(device, client_nums, model_name, dataset)
+    server = Server(device, client_nums, model_name, dataset, batch_norm=False)
     fl_rounds = 500
     clients = []
     for i in range(client_nums):

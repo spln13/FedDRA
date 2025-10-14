@@ -12,7 +12,7 @@ from PPO import DualStreamConfig, DualStreamPPO
 
 class Server(object):
     def __init__(self, device, clients, dataset, memory_capacity,
-                 d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256):
+                 d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256, batch_norm=True):
         self.device = device  # 'cpu' or 'cuda'
         self.clients = clients  # list of Client objects
         self.dataset = dataset  # string
@@ -26,7 +26,7 @@ class Server(object):
         self.agent = DualStreamPPO(self.ppo_config)
         self.ppo_update_every = 3
         self.init_models_save_path = './init_models/'
-        self.server_model = MiniVGG(dataset=self.dataset)
+        self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
 
     def do(self):
         self.generate_next_round_params()  # 收集上一轮FL指标
