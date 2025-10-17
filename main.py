@@ -98,3 +98,9 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# 测试命令
+# nohup python main.py --algo fedDRA > logs/fedDRA_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
+# nohup python main.py --algo fedAvg > logs/fedAvg_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
+

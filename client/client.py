@@ -43,6 +43,7 @@ class Client(object):
             self.train_for_prune()
 
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
+        # 这里加入mock信息，增加训练时间的随机性
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
               "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}".format(self.id, self.round, acc,
                                                                                          total_time, avg_loss,
@@ -388,3 +389,18 @@ class Client(object):
                 optimizer.step()
                 train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
         self.model = model
+
+
+    def mock_time_delay(self, total_time):
+        # 需要固定配置，对所有方法都使用这个配置
+        # 对于某个client，对一个round区间增加time_cost
+        if self.id in (7, 8):
+            if self.round in range(10, 20):
+                total_time += 10
+
+        if self.id in (2, 3):
+            if self.round in range(40, 50):
+                total_time += 20
+
+
+        return total_time
