@@ -28,6 +28,79 @@ class Server(object):
         self.init_models_save_path = './init_models/'
         self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
 
+        # --- Warmup & Mixing ---
+        self.warmup_rounds = getattr(self, "warmup_rounds", 10)  # 前10轮不用PPO，只用规则/混合
+        self.mix_epsilon_start = 1.0  # 早期完全规则
+        self.mix_epsilon_end = 0.0  # 退火到纯PPO
+        self.mix_epsilon_decay_rounds = 20  # ε 线性退火轮数
+
+        # --- 动作稳定 / 冷却 / TTL（与前面你已有的惯性/滞回一致即可） ---
+        self.delta_eps = getattr(self, "delta_eps", 0.05)  # 剪枝率变更的滞回阈值（5%）
+        self.cooldown_rounds = getattr(self, "cooldown_rounds", 3)  # 至少间隔3轮才允许更换p
+        self.client_last_change = {c.id: -10 for c in self.clients}
+
+        # 掩码TTL（如果你复用掩码）：达到TTL且变化超阈才重剪
+        self.mask_ttl = getattr(self, "mask_ttl", 4)
+        self.client_mask_round = {c.id: -10 for c in self.clients}
+
+        # --- 奖励：剪枝率变更惩罚权重 ---
+        self.lambda_p = getattr(self, "lambda_p", 0.5)
+
+    def _rule_policy(self, times, entropies):
+        """
+        规则策略：给“更慢/更不确定”的客户端更多容量（更小剪枝率）与更多轮数
+        返回：p_rule(list[float]), E_rule(list[int])
+        """
+        N = len(times)
+        T = np.array(times, dtype=float)
+        H = np.array(entropies, dtype=float)
+        # 0..1 排名与归一化
+        T_rank = (T.argsort().argsort() / max(N - 1, 1)) if N > 1 else np.zeros_like(T)
+        H_norm = (H - H.min()) / max(H.max() - H.min(), 1e-6)
+
+        p_low, p_high = self.agent.cfg.p_low, self.agent.cfg.p_high
+        E_min, E_max = self.agent.cfg.E_min, self.agent.cfg.E_max
+
+        p0 = 0.5 * (p_low + p_high)
+        # 系数可微调：慢(0.15)、不确定(0.10)
+        p_rule = np.clip(p0 - 0.15 * T_rank - 0.10 * H_norm, p_low, p_high)
+
+        E_rule = np.clip(np.round(E_min + (E_max - E_min) * (0.5 * H_norm + 0.25 * T_rank)),
+                         E_min, E_max).astype(int)
+        return p_rule.tolist(), E_rule.tolist()
+
+    def _mix_actions(self, p_ppo, E_ppo, p_rule, E_rule):
+        """
+        ε-greedy 混合动作。热身期优先用规则；退火到纯PPO。
+        """
+        N = len(p_ppo)
+        # 线性退火
+        eps = max(self.mix_epsilon_end,
+                  self.mix_epsilon_start - (self.round_id / max(1, self.mix_epsilon_decay_rounds)) *
+                  (self.mix_epsilon_start - self.mix_epsilon_end))
+        # 热身期强制规则
+        use_rule_prob = eps if self.round_id > self.warmup_rounds else 1.0
+
+        p_next, E_next = [], []
+        for i in range(N):
+            if np.random.rand() < use_rule_prob:
+                p_next.append(float(p_rule[i]))
+                E_next.append(int(E_rule[i]))
+            else:
+                p_next.append(float(p_ppo[i]))
+                E_next.append(int(E_ppo[i]))
+        return p_next, E_next
+
+    def _allow_change(self, client_id, old_p, new_p):
+        """冷却 + 滞回：若变化未达阈值或冷却未过，则不更换p"""
+        if abs(new_p - old_p) < self.delta_eps:
+            return False
+        last = self.client_last_change.get(client_id, -10)
+        if (self.round_id - last) < self.cooldown_rounds:
+            return False
+        self.client_last_change[client_id] = self.round_id
+        return True
+
     def do(self):
         self.generate_next_round_params()  # 收集上一轮FL指标
         self.aggregate()  # 聚合模型，生成server_model
@@ -70,7 +143,7 @@ class Server(object):
             losses.append(float(avg_loss))
             ids.append(int(client_id))
             accs.append(float(acc))
-            prev_p.append(float(client.cur_pruning_rate))
+            prev_p.append(float(client.last_pruning_rate))
 
         N = len(self.clients)
         if N == 0:
@@ -78,16 +151,14 @@ class Server(object):
 
         # ===== B) 构造 PPO 状态 =====
         # 全局特征 S_glob: [Acc, dAcc, Tmax, dT, round_id, bw]
-        if hasattr(self, "evaluate_global") and callable(self.evaluate_global):
-            acc_now = float(self.evaluate_global())
-        else:
-            acc_now = float(sum(accs) / max(len(accs), 1))  # 没有全局评估就用均值占位
+        acc_now = float(sum(accs) / max(len(accs), 1))  # 没有全局评估就用均值占位
 
         prev_acc = float(getattr(self, "prev_acc", 0.0))
         dAcc = acc_now - prev_acc
         Tmax = float(max(times)) if times else 0.0
         dT = float(max(times) - min(times)) if len(times) > 1 else 0.0
         bw = 1.0  # 可替换为真实带宽/拥塞指标
+        dP = abs(sum(p_exec) - sum(prev_p))  # 剪枝率变化
 
         S_glob = torch.tensor([[acc_now, dAcc, Tmax, dT, float(getattr(self, "round_id", 0)), bw]],
                               dtype=torch.float32, device=self.device)  # [1, 6]
@@ -107,12 +178,12 @@ class Server(object):
             ])
         S_cli = torch.tensor([rows], dtype=torch.float32, device=self.device)  # [1, N, 7]
         mask = torch.ones(1, N, dtype=torch.float32, device=self.device)  # 全在线=1；掉线置0
+        prev_p_tensor = torch.tensor([[[x] for x in prev_p]], dtype=torch.float32, device=self.device)  # 之前剪枝率的tensor
 
         # ===== C) 写入经验 (state, action, reward) =====
         # 1) 构造全局奖励（示例：R = α·ΔAcc - β·Tmax - γ·ΔT - λ·CommCost）
         #    如果你有实际通信量，可据此计算 comm_cost；这里先置 0
-        comm_cost = 0.0
-        R = float(1.0 * dAcc - 0.01 * Tmax - 0.01 * dT - 0.0 * comm_cost)
+        R = float(1.0 * dAcc - 0.01 * Tmax - 0.01 * dT - 0.05 * dP)
 
         # 2) 动作张量（形状与 PPO 网络一致）
         p_tensor = torch.tensor([[[x] for x in p_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
@@ -140,25 +211,41 @@ class Server(object):
         # ===== D) 用策略为“下一轮”生成动作并下发 =====
         with torch.no_grad():
             out_next = self.agent.select_actions(S_glob, S_cli, mask, prev_p=prev_p_tensor)
-        p_next = out_next["p"][0, :, 0].tolist()  # [N]
-        E_next = [int(x) for x in out_next["E"][0, :, 0].tolist()]  # [N]
+        p_ppo = out_next["p"][0, :, 0].tolist()
+        E_ppo = [int(x) for x in out_next["E"][0, :, 0].tolist()]
 
+        # 规则动作
+        p_rule, E_rule = self._rule_policy(times, entropies)
+        # ε-混合（热身期优先规则，随后退火）
+        p_next, E_next = self._mix_actions(p_ppo, E_ppo, p_rule, E_rule)
+
+        # 冷却/滞回：是否采纳新 p；并设置下一轮的训练轮数
         for i, client in enumerate(self.clients):
-            client.cur_pruning_rate = float(p_next[i])
+            old_p = float(getattr(client, "cur_pruning_rate",
+                                  p_next[i]))
+            new_p = float(p_next[i])
+
+            final_p = new_p if self._allow_change(client.id, old_p, new_p) else old_p
+            client.cur_pruning_rate = final_p
             client.training_intensity = int(E_next[i])
-            # 可选：把“下发时的 logp”缓存到 client 或 server 的某处，用于下一轮严格 on-policy
-            print("Round {} Client {} next pruning rate: {:.4f}, epochs: {}".format(self.round_id, client.id, p_next[i], E_next[i]))
+
+            # 可选：缓存下发时的 logp，严格 on-policy 时在下轮写入 buffer
             client.last_action_logp = float(out_next["logp"][0, i].item())
 
-        # 统计刷新（供下一轮 dAcc 使用）
-        self.prev_acc = acc_now
-        self.round_id = self.round_id + 1
+            print(f"[Round {self.round_id}] Client {client.id} -> next p={final_p:.4f}, E={client.training_intensity}")
 
-        # ===== E) 到间隔则触发 PPO 更新 =====
-        if len(self.agent.buffer.data) >= self.ppo_update_every:
+        # ===== E) 仅在热身后按节奏更新 PPO =====
+        self.prev_acc = acc_now
+        self.round_id += 1
+
+        if (self.round_id > self.warmup_rounds) and (len(self.agent.buffer.data) >= self.ppo_update_every):
             self.agent.ppo_update(epochs=4, batch_size=256, normalize_adv=True)
-            # buffer 在 ppo_update 内部已清空
             print("PPO updated ✅")
+
+        # 返回给上层（可选）
+        return {c.id: dict(pruning_rate=float(getattr(c, "cur_pruning_rate", 0.0)),
+                           epochs=int(getattr(c, "training_intensity", getattr(self.agent.cfg, "E_min", 1))))
+                for c in self.clients}
 
         # 返回给上层（可选）
         return {c.id: dict(pruning_rate=float(p_next[i]), epochs=int(E_next[i]))
