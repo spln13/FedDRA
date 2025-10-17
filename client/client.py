@@ -393,14 +393,16 @@ class Client(object):
 
     def mock_time_delay(self, total_time):
         # 需要固定配置，对所有方法都使用这个配置
-        # 对于某个client，对一个round区间增加time_cost
-        if self.id in (7, 8):
-            if self.round in range(10, 20):
-                total_time += 10
-
+        # 对于某个client，对一个round区间增加time_cost，以秒为单位
         if self.id in (2, 3):
             if self.round in range(40, 50):
-                total_time += 20
+                total_time += 5
 
+        if self.id in (5, 6):
+            if self.round in range(70, 80):
+                total_time += 4
+        if self.id in (7, 8):
+            if self.round in range(10, 20):
+                total_time += 3
 
         return total_time
