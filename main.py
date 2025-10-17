@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import torch
 
@@ -6,7 +7,7 @@ from server.server import Server
 from client.client import Client
 
 
-def fedAvg():
+def fedAvg(args):
     # 这里弄fedavg的算法流程
     client_nums = 10
     model_name = 'MiniVGG'
@@ -15,8 +16,9 @@ def fedAvg():
     server = Server(device, client_nums, model_name, dataset, batch_norm=False)
     fl_rounds = 500
     clients = []
+    epochs = args.epochs
     for i in range(client_nums):
-        client = Client(i, device, model_name, 1, dataset, 16, batch_norm=False)
+        client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=False)
         clients.append(client)
     server.clients = clients
     print("fedAvg Start Training...")
@@ -26,7 +28,6 @@ def fedAvg():
         for c in clients:
             acc = c.test()
         print("Round {} Client {} Test Acc: {:.2f}%".format(r, c.id, acc))
-
     final_acc = []
     for c in clients:
         acc = c.test()
@@ -36,8 +37,7 @@ def fedAvg():
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
 
 
-def fedDRA():
-
+def fedDRA(args):
     client_nums = 10
     fl_rounds = 500
     model_name = 'MiniVGG'
@@ -58,12 +58,10 @@ def fedDRA():
         client = Client(i, device, model_name, 1, dataset, 16)
         clients.append(client)
     server.clients = clients
-
     print("fedDRA Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
         server.do()  # 每一轮的逻辑包在server内实现
-
     final_acc = []
     for c in clients:
         acc = c.test()
@@ -84,14 +82,21 @@ def main():
         help="选择要运行的算法: fedDRA 或 fedAvg (默认: fedDRA)"
     )
 
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=10,
+        help="联邦学习本地训练epochs"
+    )
+
     args = parser.parse_args()
 
     if args.algo.lower() == "fedavg":
         print("Running FedAvg...")
-        fedAvg()
+        fedAvg(args)
     elif args.algo.lower() == "feddra":
         print("Running FedDRA...")
-        fedDRA()
+        fedDRA(args)
     else:
         raise ValueError(f"未知算法: {args.algo}")
 

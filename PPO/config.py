@@ -16,7 +16,7 @@ class DualStreamConfig:
     p_low: float = 0.2          # 剪枝率最小值
     p_high: float = 0.8         # 剪枝率最大值
     E_min: int = 1              # 训练轮数最小
-    E_max: int = 5              # 训练轮数最大
+    E_max: int = 19              # 训练轮数最大
 
     # PPO 超参
     gamma: float = 0.99

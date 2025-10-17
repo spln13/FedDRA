@@ -12,7 +12,8 @@ from tqdm import tqdm
 
 
 class Client(object):
-    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001, base_dir="./dataset", batch_norm=True):
+    def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001,
+                 base_dir="./dataset", batch_norm=True):
         self.id = client_id
         self.device = device
         self.model_name = model_name
@@ -28,6 +29,7 @@ class Client(object):
         self.last_acc = 0.
         self.base_dir = base_dir
         self.round = 0
+        self.client_do_times = []  # client运行时间数组，包括剪枝时间
 
     def do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -35,23 +37,34 @@ class Client(object):
         # 1. 获取从server获取的剪枝后模型，和训练轮数
         # 2. 开始本地训练epochs轮次，统计for ppo的指标
         # 3. 需要返回的指标:
+        prune_time = 0.
         if self.cur_pruning_rate != self.last_pruning_rate:
             # 剪枝率不一致，需要重新剪枝
-            print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
+            prune_start_time = time.time()
+            print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(
+                self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
             self.train_for_prune()  # 使用本地数据训练一下全局模型，更新bn参数
             self.model = self.prune(self.aggregated_model, self.cur_pruning_rate)
             self.train_for_prune()
+            prune_end_time = time.time()
+            prune_time = prune_end_time - prune_start_time
 
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
-        # 这里加入mock信息，增加训练时间的随机性
-        print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
-              "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}".format(self.id, self.round, acc,
-                                                                                         total_time, avg_loss,
-                                                                                         entropy, local_data_size,
-                                                                                         self.cur_pruning_rate,
-                                                                                         self.training_intensity))
+        self.client_do_times.append(total_time + prune_time)
         self.round += 1
-        return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss
+
+        print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
+              "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}, prune_time: {}".format(self.id,
+                                                                                                         self.round,
+                                                                                                         acc,
+                                                                                                         total_time,
+                                                                                                         avg_loss,
+                                                                                                         entropy,
+                                                                                                         local_data_size,
+                                                                                                         self.cur_pruning_rate,
+                                                                                                         self.training_intensity,
+                                                                                                         prune_time))
+        return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss, total_time + prune_time
 
     def _build_model(self, batch_norm=True):
         if self.model_name == 'MiniVGG':
@@ -65,6 +78,7 @@ class Client(object):
 
     def train(self, sr=False):
         """模型训练制定epoch，需要统计训练时间、平均loss、本地数据量Di和信息熵"""
+
         # ---------- 工具函数：预测熵 ----------
         def _entropy_from_logits(logits: torch.Tensor) -> torch.Tensor:
             prob = F.softmax(logits, dim=-1).clamp_min(1e-12)
@@ -196,7 +210,6 @@ class Client(object):
         acc = 100. * correct / len(test_loader.dataset)
         return acc
 
-
     def prune(self, model, pruning_rate):
         """从一个完整模型剪枝到剪枝率=pruning_rate模型"""
         if pruning_rate == 0.:
@@ -285,8 +298,6 @@ class Client(object):
 
         return new_model
 
-
-
     def train_for_prune(self, sr=True):
         # 训练少轮次，更新bn参数供剪枝算法使用
         model = self.aggregated_model
@@ -343,7 +354,6 @@ class Client(object):
         acc = 100. * correct / len(test_loader.dataset)
         return acc
 
-
     def _npz_path(self, split: str) -> str:
         return os.path.join(self.base_dir, self.dataset_name, split, f"{self.id}.npz")
 
@@ -359,12 +369,10 @@ class Client(object):
         ds = NpzArrayDataset(self._npz_path("local_test"), self.dataset_name, train=False)
         return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
-
-
     def fedavg_do(self):
         # 训练少轮次，更新bn参数供剪枝算法使用
         model = self.model
-        epochs = 1
+        epochs = self.training_intensity
         model = model.to(self.device)
         train_loader = self.load_train_data()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
@@ -390,19 +398,12 @@ class Client(object):
                 train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
         self.model = model
 
-
     def mock_time_delay(self, total_time):
-        # 需要固定配置，对所有方法都使用这个配置
-        # 对于某个client，对一个round区间增加time_cost，以秒为单位
-        if self.id in (2, 3):
-            if self.round in range(40, 50):
-                total_time += 5
-
-        if self.id in (5, 6):
-            if self.round in range(70, 80):
-                total_time += 4
-        if self.id in (7, 8):
-            if self.round in range(10, 20):
-                total_time += 3
-
+        # 用于模拟终端之间的性能差异，通过训练时间来反馈
+        if self.id % 4 == 1:
+            total_time *= 2.
+        elif self.id % 4 == 2:
+            total_time *= 3.
+        elif self.id % 4 == 3:
+            total_time *= 5.
         return total_time

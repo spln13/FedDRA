@@ -46,6 +46,8 @@ class Server(object):
         # --- 奖励：剪枝率变更惩罚权重 ---
         self.lambda_p = getattr(self, "lambda_p", 0.5)
 
+        self.rewards = []
+
     def _rule_policy(self, times, entropies):
         """
         规则策略：给“更慢/更不确定”的客户端更多容量（更小剪枝率）与更多轮数
@@ -130,11 +132,11 @@ class Server(object):
         """
 
         # ===== A) 收集 client 指标（本轮已执行的动作及结果） =====
-        times, entropies, sizes = [], [], []
+        times, entropies, sizes, do_times = [], [], [], []
         p_exec, E_exec, losses, ids, accs, prev_p = [], [], [], [], [], []
 
         for client in self.clients:
-            acc, total_time, entropy, local_data_size, client_id, client_last_pruning_rate, client_epochs, avg_loss = client.do()
+            acc, total_time, entropy, local_data_size, client_id, client_last_pruning_rate, client_epochs, avg_loss, client_do_time = client.do()
             times.append(float(total_time))
             entropies.append(float(entropy))
             sizes.append(int(local_data_size))
@@ -144,11 +146,14 @@ class Server(object):
             ids.append(int(client_id))
             accs.append(float(acc))
             prev_p.append(float(client.last_pruning_rate))
+            do_times.append(float(client_do_time))
 
         N = len(self.clients)
         if N == 0:
             return {}
 
+        total_client_wait_time = self.cal_wait_time(do_times)
+        print(f"[Round {self.round_id}] Total client wait time: {total_client_wait_time:.2f}s")
         # ===== B) 构造 PPO 状态 =====
         # 全局特征 S_glob: [Acc, dAcc, Tmax, dT, round_id, bw]
         acc_now = float(sum(accs) / max(len(accs), 1))  # 没有全局评估就用均值占位
@@ -184,7 +189,7 @@ class Server(object):
         # 1) 构造全局奖励（示例：R = α·ΔAcc - β·Tmax - γ·ΔT - λ·CommCost）
         #    如果你有实际通信量，可据此计算 comm_cost；这里先置 0
         R = float(1.0 * dAcc - 0.01 * Tmax - 0.01 * dT - 0.05 * dP)
-
+        self.rewards.append(R)
         # 2) 动作张量（形状与 PPO 网络一致）
         p_tensor = torch.tensor([[[x] for x in p_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
         E_tensor = torch.tensor([[[x] for x in E_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
@@ -247,9 +252,6 @@ class Server(object):
                            epochs=int(getattr(c, "training_intensity", getattr(self.agent.cfg, "E_min", 1))))
                 for c in self.clients}
 
-        # 返回给上层（可选）
-        return {c.id: dict(pruning_rate=float(p_next[i]), epochs=int(E_next[i]))
-                for i, c in enumerate(self.clients)}
 
     def aggregate(self):
         server_model = self.server_model
@@ -362,3 +364,15 @@ class Server(object):
             for server_param, client_param in zip(server_model.parameters(), client_model.parameters()):
                 server_param.data += client_param.data.clone() * ratio
         self.server_model = server_model
+
+
+
+    def cal_wait_time(self, total_time):
+        # 根据client使用的total_time计算客户端等待的时间
+        max_time = max(total_time)
+        wait_times = [max_time - t for t in total_time]
+        return wait_times
+
+
+
+
