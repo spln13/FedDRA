@@ -30,6 +30,7 @@ class Client(object):
         self.base_dir = base_dir
         self.round = 0
         self.client_do_times = []  # client运行时间数组，包括剪枝时间
+        self.client_total_do_time = 0.
 
     def do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -51,6 +52,7 @@ class Client(object):
 
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         self.client_do_times.append(total_time + prune_time)
+        self.client_total_do_time += total_time + prune_time
         self.round += 1
 
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
@@ -378,7 +380,7 @@ class Client(object):
         optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
         criterion = nn.CrossEntropyLoss()
         losses = []  # ✅ 用于存储所有batch的loss
-
+        start_time = time.time()
         for epoch in range(epochs):
             if epoch in [int(epochs * 0.5), int(epochs * 0.75)]:
                 for param_group in optimizer.param_groups:
@@ -397,6 +399,11 @@ class Client(object):
                 optimizer.step()
                 train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
         self.model = model
+        end_time = time.time()
+        total_time = end_time - start_time
+        total = self.mock_time_delay(total_time)  # 模拟终端性能差异
+        self.client_do_times.append(total)
+        return total
 
     def mock_time_delay(self, total_time):
         # 用于模拟终端之间的性能差异，通过训练时间来反馈

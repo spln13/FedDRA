@@ -1,4 +1,6 @@
 import os
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -47,6 +49,8 @@ class Server(object):
         self.lambda_p = getattr(self, "lambda_p", 0.5)
 
         self.rewards = []
+        self.client_wait_times = []
+        self.total_run_time = 0.
 
     def _rule_policy(self, times, entropies):
         """
@@ -103,11 +107,13 @@ class Server(object):
         self.client_last_change[client_id] = self.round_id
         return True
 
-    def do(self):
+    def feddra_do(self):
+        start_time = time.time()
         self.generate_next_round_params()  # 收集上一轮FL指标
         self.aggregate()  # 聚合模型，生成server_model
         self.send_model_to_clients()  # 下发模型到各client
-
+        end_time = time.time()
+        self.total_run_time += end_time - start_time
 
     def send_model_to_clients(self):
         """
@@ -136,7 +142,7 @@ class Server(object):
         p_exec, E_exec, losses, ids, accs, prev_p = [], [], [], [], [], []
 
         for client in self.clients:
-            acc, total_time, entropy, local_data_size, client_id, client_last_pruning_rate, client_epochs, avg_loss, client_do_time = client.do()
+            acc, total_time, entropy, local_data_size, client_id, client_last_pruning_rate, client_epochs, avg_loss, client_do_time = client.feddra_do()
             times.append(float(total_time))
             entropies.append(float(entropy))
             sizes.append(int(local_data_size))
@@ -210,9 +216,8 @@ class Server(object):
             V=V_now,
             reward=torch.tensor([[R]], dtype=torch.float32, device=self.device),
             done=torch.zeros(1, 1, device=self.device),
+            prev_p=prev_p_tensor
         ))
-
-        prev_p_tensor = torch.tensor([[[x] for x in prev_p]], dtype=torch.float32, device=self.device)
         # ===== D) 用策略为“下一轮”生成动作并下发 =====
         with torch.no_grad():
             out_next = self.agent.select_actions(S_glob, S_cli, mask, prev_p=prev_p_tensor)
@@ -344,12 +349,20 @@ class Server(object):
 
 
     def fedavg_do(self):
+        start_time = time.time()
+        client_do_time = []
         for client in self.clients:
-            client.fedavg_do()
+            do_time = client.fedavg_do()
+            client_do_time.append(do_time)
+
+        wait_time = self.cal_wait_time(client_do_time)
+        self.client_wait_times.append(wait_time)
         self.fedavg_aggregate()
         state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
         for client in self.clients:
             client.model.load_state_dict(state)
+        end_time = time.time()
+        self.total_run_time += end_time - start_time
 
     def fedavg_aggregate(self):
         server_model = self.server_model
@@ -366,12 +379,17 @@ class Server(object):
         self.server_model = server_model
 
 
+    def fedbn_do(self):
+        # fedbn方法，聚合除bn层以外参数
+
+        pass
+
 
     def cal_wait_time(self, total_time):
         # 根据client使用的total_time计算客户端等待的时间
         max_time = max(total_time)
-        wait_times = [max_time - t for t in total_time]
-        return wait_times
+        wait_time = sum(max_time - t for t in total_time)
+        return wait_time
 
 
 

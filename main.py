@@ -35,6 +35,7 @@ def fedAvg(args):
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
+    cal_run_time(server)
 
 
 def fedDRA(args):
@@ -61,7 +62,7 @@ def fedDRA(args):
     print("fedDRA Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
-        server.do()  # 每一轮的逻辑包在server内实现
+        server.feddra_do()  # 每一轮的逻辑包在server内实现
     final_acc = []
     for c in clients:
         acc = c.test()
@@ -69,6 +70,20 @@ def fedDRA(args):
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
+    cal_run_time(server)
+
+
+def fedbn(args):
+    pass
+
+
+def cal_run_time(server):
+    total_run_time = server.total_run_time
+    for client in server.clients:
+        total_run_time += client.client_total_do_time
+    print("#######Total Run Time: {:.2f} seconds".format(total_run_time))
+
+
 
 
 def main():
