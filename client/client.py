@@ -389,7 +389,7 @@ class Client(object):
         epochs = self.training_intensity
         model = model.to(self.device)
         train_loader = self.load_train_data()
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, weight_decay=1e-4)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_decay=1e-4)
         criterion = nn.CrossEntropyLoss()
         losses = []  # ✅ 用于存储所有batch的loss
         start_time = time.time()
