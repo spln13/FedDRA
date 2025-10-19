@@ -23,10 +23,12 @@ def fedAvg(args):
     print("fedAvg Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
+        accs = []
         server.fedavg_do()  # 每一轮的逻辑包在server内实现
         for c in clients:
             acc = c.test()
-        print("Round {} Client {} Test Acc: {:.2f}%".format(r, c.id, acc))
+            accs.append(acc)
+        print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
     final_acc = []
     for c in clients:
         acc = c.test()
