@@ -126,7 +126,7 @@ class Client(object):
                     param_group['lr'] *= 0.1
             # training
             model.train()
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False, disable=True)
             for batch_idx, (data, target) in train_loader_tqdm:
                 data, target = data.to(self.device), target.to(self.device)
                 optimizer.zero_grad()
