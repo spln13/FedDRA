@@ -14,7 +14,7 @@ from PPO import DualStreamConfig, DualStreamPPO
 
 class Server(object):
     def __init__(self, device, clients, dataset, memory_capacity,
-                 d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256, batch_norm=True):
+                 d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256, batch_norm=True, warmup_rounds=10):
         self.device = device  # 'cpu' or 'cuda'
         self.clients = clients  # list of Client objects
         self.dataset = dataset  # string
@@ -31,7 +31,7 @@ class Server(object):
         self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
 
         # --- Warmup & Mixing ---
-        self.warmup_rounds = getattr(self, "warmup_rounds", 10)  # 前10轮不用PPO，只用规则/混合
+        self.warmup_rounds = warmup_rounds  # 前10轮不用PPO，只用规则/混合
         self.mix_epsilon_start = 1.0  # 早期完全规则
         self.mix_epsilon_end = 0.0  # 退火到纯PPO
         self.mix_epsilon_decay_rounds = 20  # ε 线性退火轮数
@@ -41,10 +41,6 @@ class Server(object):
         self.cooldown_rounds = getattr(self, "cooldown_rounds", 3)  # 至少间隔3轮才允许更换p
         self.client_last_change = {c.id: -10 for c in self.clients}
 
-        # 掩码TTL（如果你复用掩码）：达到TTL且变化超阈才重剪
-        self.mask_ttl = getattr(self, "mask_ttl", 4)
-        self.client_mask_round = {c.id: -10 for c in self.clients}
-
         # --- 奖励：剪枝率变更惩罚权重 ---
         self.lambda_p = getattr(self, "lambda_p", 0.5)
 
@@ -53,26 +49,26 @@ class Server(object):
         self.total_run_time = 0.
 
     def _rule_policy(self, times, entropies):
-        """
-        规则策略：给“更慢/更不确定”的客户端更多容量（更小剪枝率）与更多轮数
-        返回：p_rule(list[float]), E_rule(list[int])
-        """
         N = len(times)
         T = np.array(times, dtype=float)
         H = np.array(entropies, dtype=float)
-        # 0..1 排名与归一化
+
+        # 归一化
         T_rank = (T.argsort().argsort() / max(N - 1, 1)) if N > 1 else np.zeros_like(T)
         H_norm = (H - H.min()) / max(H.max() - H.min(), 1e-6)
 
         p_low, p_high = self.agent.cfg.p_low, self.agent.cfg.p_high
         E_min, E_max = self.agent.cfg.E_min, self.agent.cfg.E_max
-
         p0 = 0.5 * (p_low + p_high)
-        # 系数可微调：慢(0.15)、不确定(0.10)
+
+        # ---- 剪枝率 P_i：慢 + 不确定 → 模型更大 ----
         p_rule = np.clip(p0 - 0.15 * T_rank - 0.10 * H_norm, p_low, p_high)
 
-        E_rule = np.clip(np.round(E_min + (E_max - E_min) * (0.5 * H_norm + 0.25 * T_rank)),
-                         E_min, E_max).astype(int)
+        # ---- 训练轮数 E_i：慢 → 少轮；不确定 → 多轮 ----
+        E_rule = np.clip(np.round(
+            E_min + (E_max - E_min) * (0.5 * H_norm - 0.25 * T_rank)
+        ), E_min, E_max).astype(int)
+
         return p_rule.tolist(), E_rule.tolist()
 
     def _mix_actions(self, p_ppo, E_ppo, p_rule, E_rule):

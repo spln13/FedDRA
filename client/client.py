@@ -24,6 +24,7 @@ class Client(object):
         self.last_pruning_rate = 0.
         self.cur_pruning_rate = 0.
         self.training_epochs_for_prune = 10
+        self.finetune_epochs = 5
         self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
         self.aggregated_model = self._build_model()  # 聚合后的全局模型
         self.last_acc = 0.
@@ -31,6 +32,7 @@ class Client(object):
         self.round = 0
         self.client_do_times = []  # client运行时间数组，包括剪枝时间
         self.client_total_do_time = 0.
+
 
     def do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -300,11 +302,13 @@ class Client(object):
 
         return new_model
 
-    def train_for_prune(self, sr=True):
+    def train_for_prune(self, sr=True, finetune=False):
         # 训练少轮次，更新bn参数供剪枝算法使用
         model = self.aggregated_model
         model.fill_bn()
         epochs = self.training_epochs_for_prune  # for剪枝训练强度
+        if finetune:
+            epochs = self.finetune_epochs
         model = model.to(self.device)
         train_loader = self.load_train_data()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
