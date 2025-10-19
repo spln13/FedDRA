@@ -340,6 +340,14 @@ class Client(object):
 
         self.aggregated_model = model
 
+
+    def prune_from_client(self):
+        # 从client.model还原成大模型，重新按照剪枝率剪
+        model = self.model  # client本地模型
+
+
+
+
     def test(self):
         model = self.load_model()
         test_loader = self.load_test_data(batch_size=128)

@@ -13,14 +13,13 @@ def fedAvg(args):
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    server = Server(device, client_nums, model_name, dataset, batch_norm=False)
     fl_rounds = 500
     clients = []
     epochs = args.epochs
     for i in range(client_nums):
         client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=False)
         clients.append(client)
-    server.clients = clients
+    server = Server(device, clients, model_name, dataset, batch_norm=False)
     print("fedAvg Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
@@ -53,12 +52,11 @@ def fedDRA(args):
     E_min = 1  # 最小训练轮次
     E_max = 5  # 最大训练轮次
     hidden = 256  # PPO网络隐藏层维度
-    server = Server(device, client_nums, model_name, dataset, d_glob, d_cli, p_low, p_high, E_min, E_max, hidden)
     clients = []
     for i in range(client_nums):
         client = Client(i, device, model_name, 1, dataset, 16)
         clients.append(client)
-    server.clients = clients
+    server = Server(device, clients, model_name, dataset, d_glob, d_cli, p_low, p_high, E_min, E_max, hidden)
     print("fedDRA Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
