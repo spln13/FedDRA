@@ -19,7 +19,7 @@ def fedAvg(args):
     for i in range(client_nums):
         client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=False)
         clients.append(client)
-    server = Server(device, clients, model_name, dataset, batch_norm=False)
+    server = Server(device, clients, dataset, model_name, batch_norm=False)
     print("fedAvg Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
@@ -82,6 +82,8 @@ def cal_run_time(server):
     for client in server.clients:
         total_run_time += client.client_total_do_time
     print("#######Total Run Time: {:.2f} seconds".format(total_run_time))
+    wait_times = server.client_wait_times
+    print("#######Client total wait time: {:.2f} seconds".format(sum(wait_times)))
 
 
 

@@ -13,14 +13,13 @@ from PPO import DualStreamConfig, DualStreamPPO
 
 
 class Server(object):
-    def __init__(self, device, clients, dataset, memory_capacity,
+    def __init__(self, device, clients, dataset, model_name='MiniVGG',
                  d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256, batch_norm=True, warmup_rounds=10):
         self.device = device  # 'cpu' or 'cuda'
         self.clients = clients  # list of Client objects
         self.dataset = dataset  # string
         self.round_id = 0
         self.prev_acc = 0.0  # 上一轮全局模型精度
-        self.memory_capacity = memory_capacity
         self.ppo_config = DualStreamConfig(d_glob=d_glob, d_cli=d_cli,
                                            p_low=p_low, p_high=p_high, E_min=E_min, E_max=E_max,
                                            hidden=hidden)
@@ -28,6 +27,7 @@ class Server(object):
         self.agent = DualStreamPPO(self.ppo_config)
         self.ppo_update_every = 3
         self.init_models_save_path = './init_models/'
+        self.model_name = model_name
         self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
 
         # --- Warmup & Mixing ---
@@ -378,6 +378,23 @@ class Server(object):
     def fedbn_do(self):
         # fedbn方法，聚合除bn层以外参数
 
+        start_time = time.time()
+        client_do_time = []
+        for client in self.clients:
+            do_time = client.fedavg_do()
+            client_do_time.append(do_time)
+        wait_time = self.cal_wait_time(client_do_time)
+        self.client_wait_times.append(wait_time)
+        self.fedbn_aggregate()
+        state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
+        for client in self.clients:
+            client.model.load_state_dict(state)
+        end_time = time.time()
+        self.total_run_time += end_time - start_time
+
+
+
+    def fedbn_aggregate(self):
         pass
 
 
