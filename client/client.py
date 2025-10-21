@@ -26,7 +26,6 @@ class Client(object):
         self.training_epochs_for_prune = 8
         self.finetune_epochs = 4
         self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
-        self.aggregated_model = self._build_model()  # 聚合后的全局模型
         self.last_acc = 0.
         self.base_dir = base_dir
         self.round = 0
@@ -329,7 +328,7 @@ class Client(object):
                 optimizer.step()
                 train_loader_tqdm.set_description(f'Train For Prune Epoch: {epoch} Loss: {loss.item():.6f}')
 
-        self.aggregated_model = model
+        self.model = model
 
 
     def fill_to_full_model_and_train(self):

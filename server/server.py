@@ -125,7 +125,7 @@ class Server(object):
         """
         state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
         for client in self.clients:
-            client.aggregated_model.load_state_dict(state)
+            client.model.load_state_dict(state)
 
 
 
