@@ -34,7 +34,7 @@ class Client(object):
         self.client_total_do_time = 0.
         self.batch_norm = batch_norm
 
-    def do(self):
+    def feddra_do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
         # 0. 判断剪枝率是否一致，一致则使用mask从aggregated_model汇总获取剪枝后的模型，不一致则从aggregated_model中获取
         # 1. 获取从server获取的剪枝后模型，和训练轮数
