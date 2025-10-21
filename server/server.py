@@ -8,6 +8,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 from utils.utils import read_client_data
+from models.mnist_net import MNISTNet
 from models.mini_vgg import MiniVGG
 from PPO import DualStreamConfig, DualStreamPPO
 
@@ -47,6 +48,13 @@ class Server(object):
         self.rewards = []
         self.client_wait_times = []
         self.total_run_time = 0.
+
+    def _init_server_model(self, batch_norm=True):
+        if self.model_name == 'MiniVGG':
+            return MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
+        if self.model_name == 'MnistNet':
+            return MNISTNet()
+        raise NotImplementedError
 
     def _rule_policy(self, times, entropies):
         N = len(times)
@@ -385,10 +393,7 @@ class Server(object):
             client_do_time.append(do_time)
         wait_time = self.cal_wait_time(client_do_time)
         self.client_wait_times.append(wait_time)
-        self.fedbn_aggregate()
-        state = {k: v.detach().clone() for k, v in self.server_model.state_dict().items()}
-        for client in self.clients:
-            client.model.load_state_dict(state)
+        self.aggregate()
         end_time = time.time()
         self.total_run_time += end_time - start_time
 

@@ -13,7 +13,7 @@ def fedAvg(args):
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    fl_rounds = 500
+    fl_rounds = 200
     clients = []
     epochs = args.epochs
     for i in range(client_nums):
@@ -39,9 +39,42 @@ def fedAvg(args):
     cal_run_time(server)
 
 
+def fedbn(args):
+    # 这里弄fedavg的算法流程
+    client_nums = 10
+    model_name = 'MiniVGG'
+    dataset = 'cifar10'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    fl_rounds = 200
+    clients = []
+    epochs = args.epochs
+    for i in range(client_nums):
+        client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=True)
+        clients.append(client)
+    server = Server(device, clients, dataset, model_name, batch_norm=True)
+    print("fedAvg Start Training...")
+    for r in range(fl_rounds):
+        print(f"--- FL Round {r} ---")
+        accs = []
+        server.fedbn_do()
+        for c in clients:
+            acc = c.test()
+            accs.append(acc)
+        print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
+    final_acc = []
+    for c in clients:
+        acc = c.test()
+        final_acc.append(acc)
+        print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
+
+    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
+    cal_run_time(server)
+
+
+
 def fedDRA(args):
     client_nums = 10
-    fl_rounds = 500
+    fl_rounds = 200
     model_name = 'MiniVGG'
     dataset = 'cifar10'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -72,9 +105,6 @@ def fedDRA(args):
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
 
-
-def fedbn(args):
-    pass
 
 
 def cal_run_time(server):
@@ -124,5 +154,5 @@ if __name__ == '__main__':
 
 # 测试命令
 # nohup python main.py --algo fedDRA > logs/fedDRA_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
-# nohup python main.py --algo fedAvg > logs/fedAvg_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
+# nohup python main.py --algo fedAvg --epochs 10 > logs/fedAvg_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
 

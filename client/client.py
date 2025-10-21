@@ -32,7 +32,7 @@ class Client(object):
         self.round = 0
         self.client_do_times = []  # client运行时间数组，包括剪枝时间
         self.client_total_do_time = 0.
-
+        self.batch_norm = batch_norm
 
     def do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -46,9 +46,9 @@ class Client(object):
             prune_start_time = time.time()
             print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(
                 self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
-            self.train_for_prune()  # 使用本地数据训练一下全局模型，更新bn参数
+            self.fill_to_full_model_and_train()  # 使用本地数据训练一下全局模型，更新bn参数
             self.model = self.prune(self.aggregated_model, self.cur_pruning_rate)
-            self.train_for_prune()
+            self.finetune()
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
 
@@ -302,19 +302,15 @@ class Client(object):
 
         return new_model
 
-    def train_for_prune(self, sr=True, finetune=False):
+    def finetune(self):
         # 训练少轮次，更新bn参数供剪枝算法使用
-        model = self.aggregated_model
-        model.fill_bn()
-        epochs = self.training_epochs_for_prune  # for剪枝训练强度
-        if finetune:
-            epochs = self.finetune_epochs
+        model = self.model
+        epochs = self.finetune_epochs
         model = model.to(self.device)
         train_loader = self.load_train_data()
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_decay=1e-4)
         criterion = nn.CrossEntropyLoss()
         losses = []  # ✅ 用于存储所有batch的loss
-        s = self.s
 
         for epoch in range(epochs):
             if epoch in [int(epochs * 0.5), int(epochs * 0.75)]:
@@ -322,30 +318,89 @@ class Client(object):
                     param_group['lr'] *= 0.1
             # training
             model.train()
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False, disable=True)
             for batch_idx, (data, target) in train_loader_tqdm:
                 data, target = data.to(self.device), target.to(self.device)
                 optimizer.zero_grad()
                 output = model(data)
                 loss = criterion(output, target)
                 losses.append(loss.item())  # ✅ 记录每个batch的loss
-
                 loss.backward()
-                if sr:  # update batchnorm
-                    for m in model.modules():
-                        if isinstance(m, nn.BatchNorm2d):
-                            m.weight.grad.data.add_(s * torch.sign(m.weight.data))  # L1
                 optimizer.step()
                 train_loader_tqdm.set_description(f'Train For Prune Epoch: {epoch} Loss: {loss.item():.6f}')
 
         self.aggregated_model = model
 
 
-    def prune_from_client(self):
-        # 从client.model还原成大模型，重新按照剪枝率剪
-        model = self.model  # client本地模型
+    def fill_to_full_model_and_train(self):
+        model = self.model
+        full_model = self._build_model(self.batch_norm)
+        mask = model.mask
+        layer_idx_in_mask = 0
+        if self.dataset_name == 'MNIST':
+            start_mask = torch.ones(1).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
+        else:
+            start_mask = torch.ones(3).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
+        end_mask = torch.tensor(mask[layer_idx_in_mask], dtype=torch.int).bool()
+        if torch.cuda.is_available():
+            model = model.to(self.device)
+            full_model = full_model.to(self.device)
+            start_mask = start_mask.to(self.device)
+            end_mask = end_mask.to(self.device)
+        for from_layer, to_layer in zip(model.modules(), full_model.modules()):
+            start_indices = [i for i, x in enumerate(start_mask) if x]
+            end_indices = [i for i, x in enumerate(end_mask) if x]
+            if isinstance(from_layer, nn.Conv2d):
+                with torch.no_grad():
+                    for i, start_idx in enumerate(start_indices):
+                        to_layer.weight.data[end_indices, start_idx, :, :] = from_layer.weight.data[:, i, :, :]
+            if isinstance(from_layer, nn.BatchNorm2d):
+                with torch.no_grad():
+                    # with torch.no_grad():
+                    to_layer.weight.data[end_indices] = from_layer.weight.data
+                    to_layer.bias.data[end_indices] = from_layer.bias.data
+                    to_layer.running_mean.data[end_indices] = from_layer.running_mean.data
+                    to_layer.running_var.data[end_indices] = from_layer.running_var.data
+                layer_idx_in_mask += 1
+                start_mask = end_mask[:]
+                if layer_idx_in_mask < len(mask):
+                    end_mask = mask[layer_idx_in_mask]
+            if isinstance(from_layer, nn.Linear):
+                with torch.no_grad():
+                    for i, start_idx in enumerate(start_indices):
+                        to_layer.weight.data[end_indices, start_idx] = from_layer.weight.data[:, i]
+                    to_layer.bias.data[end_indices] = from_layer.bias.data
+                layer_idx_in_mask += 1
+                start_mask = end_mask[:]
+                if layer_idx_in_mask < len(mask):
+                    end_mask = mask[layer_idx_in_mask]
+        epochs = self.training_epochs_for_prune  # for剪枝训练强度
 
+        train_loader = self.load_train_data()
+        optimizer = torch.optim.SGD(full_model.parameters(), lr=0.005, momentum=0.9, weight_decay=1e-4)
+        criterion = nn.CrossEntropyLoss()
+        losses = []  # ✅ 用于存储所有batch的loss
+        s = self.s
 
+        for epoch in range(epochs):
+            # training
+            full_model.train()
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            for batch_idx, (data, target) in train_loader_tqdm:
+                data, target = data.to(self.device), target.to(self.device)
+                optimizer.zero_grad()
+                output = full_model(data)
+                loss = criterion(output, target)
+                losses.append(loss.item())  # ✅ 记录每个batch的loss
+
+                loss.backward()
+                for m in full_model.modules():
+                    if isinstance(m, nn.BatchNorm2d):
+                        m.weight.grad.data.add_(s * torch.sign(m.weight.data))  # L1
+                optimizer.step()
+                train_loader_tqdm.set_description(f'Train For Prune Epoch: {epoch} Loss: {loss.item():.6f}')
+
+        return full_model
 
 
     def test(self):
