@@ -51,6 +51,7 @@ class Client(object):
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
 
+
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         self.client_do_times.append(total_time + prune_time)
         self.client_total_do_time += total_time + prune_time
@@ -66,6 +67,7 @@ class Client(object):
                                                                                                          self.training_intensity,
                                                                                                          prune_time))
         self.round += 1
+        self.last_pruning_rate = self.cur_pruning_rate
         return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss, total_time + prune_time
 
     def _build_model(self, batch_norm=True):

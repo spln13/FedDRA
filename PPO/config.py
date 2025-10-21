@@ -21,7 +21,7 @@ class DualStreamConfig:
     # PPO 超参
     gamma: float = 0.99
     gae_lambda: float = 0.95           # GAE(lambda)
-
+    clip_eps: float = 0.2
     clip_range: float = 0.10    # 更保守的剪切（冷启动期更稳）
     ent_coef: float = 1e-3      # 初期小探索
     vf_coef: float = 0.5
