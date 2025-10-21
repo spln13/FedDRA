@@ -13,8 +13,8 @@ class DualStreamConfig:
     hidden: int = 256           # 流内嵌入维度
 
     # 动作空间（连续剪枝率 + 离散训练轮数）
-    p_low: float = 0.2          # 剪枝率最小值
-    p_high: float = 0.8         # 剪枝率最大值
+    p_low: float = 0.1          # 剪枝率最小值
+    p_high: float = 0.4         # 剪枝率最大值
     E_min: int = 1              # 训练轮数最小
     E_max: int = 19              # 训练轮数最大
 
