@@ -54,8 +54,6 @@ class Client(object):
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         self.client_do_times.append(total_time + prune_time)
         self.client_total_do_time += total_time + prune_time
-        self.round += 1
-
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
               "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}, prune_time: {}".format(self.id,
                                                                                                          self.round,
@@ -67,6 +65,7 @@ class Client(object):
                                                                                                          self.cur_pruning_rate,
                                                                                                          self.training_intensity,
                                                                                                          prune_time))
+        self.round += 1
         return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss, total_time + prune_time
 
     def _build_model(self, batch_norm=True):

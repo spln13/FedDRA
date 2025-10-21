@@ -114,8 +114,7 @@ class Server(object):
     def feddra_do(self):
         start_time = time.time()
         self.generate_next_round_params()  # 收集上一轮FL指标
-        self.aggregate()  # 聚合模型，生成server_model
-        self.send_model_to_clients()  # 下发模型到各client
+        self.aggregate()  # 聚合模型，生成并且分发模型至client
         end_time = time.time()
         self.total_run_time += end_time - start_time
 
