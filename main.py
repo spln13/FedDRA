@@ -104,6 +104,7 @@ def fedDRA(args):
 
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
+    print_reward(server.rewards)
 
 
 
@@ -115,6 +116,12 @@ def cal_run_time(server):
     wait_times = server.client_wait_times
     print("#######Client total wait time: {:.2f} seconds".format(sum(wait_times)))
 
+
+def print_reward(rewards):
+    print("Rewards: ", end="")
+    for r in rewards:
+        print("{:.4f} ".format(r), end="")
+    print()
 
 
 

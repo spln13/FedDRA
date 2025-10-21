@@ -23,8 +23,8 @@ class Client(object):
         self.s = s
         self.last_pruning_rate = 0.
         self.cur_pruning_rate = 0.
-        self.training_epochs_for_prune = 10
-        self.finetune_epochs = 5
+        self.training_epochs_for_prune = 8
+        self.finetune_epochs = 4
         self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
         self.aggregated_model = self._build_model()  # 聚合后的全局模型
         self.last_acc = 0.
