@@ -176,7 +176,7 @@ class Client(object):
         start_time = time.time()
         for epoch in range(epoch):
             model.train()
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False, disable=True)
             for batch_idx, (data, target) in train_loader_tqdm:
                 data, target = data.to(self.device), target.to(self.device)
                 optimizer.zero_grad()
@@ -356,7 +356,6 @@ class Client(object):
                         to_layer.weight.data[end_indices, start_idx, :, :] = from_layer.weight.data[:, i, :, :]
             if isinstance(from_layer, nn.BatchNorm2d):
                 with torch.no_grad():
-                    # with torch.no_grad():
                     to_layer.weight.data[end_indices] = from_layer.weight.data
                     to_layer.bias.data[end_indices] = from_layer.bias.data
                     to_layer.running_mean.data[end_indices] = from_layer.running_mean.data
@@ -385,7 +384,7 @@ class Client(object):
         for epoch in range(epochs):
             # training
             full_model.train()
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False, disable=True)
             for batch_idx, (data, target) in train_loader_tqdm:
                 data, target = data.to(self.device), target.to(self.device)
                 optimizer.zero_grad()
@@ -474,10 +473,10 @@ class Client(object):
 
     def mock_time_delay(self, total_time):
         # 用于模拟终端之间的性能差异，通过训练时间来反馈
-        if self.id % 4 == 1:
+        if self.id % 4 == 1:  # 1 5 9
             total_time *= 2.
-        elif self.id % 4 == 2:
+        elif self.id % 4 == 2:  # 2 6
             total_time *= 3.
-        elif self.id % 4 == 3:
+        elif self.id % 4 == 3:  # 3 7
             total_time *= 5.
         return total_time
