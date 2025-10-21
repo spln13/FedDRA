@@ -46,8 +46,8 @@ class Client(object):
             prune_start_time = time.time()
             print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(
                 self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
-            self.fill_to_full_model_and_train()  # 使用本地数据训练一下全局模型，更新bn参数
-            self.model = self.prune(self.aggregated_model, self.cur_pruning_rate)
+            new_model = self.fill_to_full_model_and_train()  # 使用本地数据训练一下全局模型，更新bn参数
+            self.model = self.prune(new_model, self.cur_pruning_rate)
             self.finetune()
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
