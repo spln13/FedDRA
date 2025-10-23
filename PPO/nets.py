@@ -7,6 +7,15 @@ from torch.distributions import Categorical, Normal
 from .config import DualStreamConfig
 
 
+# ---- numerically stable helper for categorical logits ----
+def _sanitize_logits(logits: torch.Tensor) -> torch.Tensor:
+    # replace non-finite, clamp, and de-center to improve softmax stability
+    logits = torch.nan_to_num(logits, nan=0.0, posinf=40.0, neginf=-40.0)
+    logits = torch.clamp(logits, -40.0, 40.0)
+    logits = logits - logits.max(dim=-1, keepdim=True).values
+    return logits
+
+
 # ====== 通用模块 ======
 
 class MLP(nn.Module):
@@ -185,16 +194,23 @@ class DualStreamActorCritic(nn.Module):
         """
         mu, log_std, logits_E, _ = self.act_value(S_glob, S_cli, mask)
 
+        # 连续 p 头（TanhNormal）
         tn = TanhNormal(mu, log_std, low=self.cfg.p_low, high=self.cfg.p_high)
         p, logp_p = tn.sample()
 
-        probs_E = F.softmax(logits_E, dim=-1)
-        cat = Categorical(probs=probs_E)
-        E_idx = cat.sample().unsqueeze(-1)   # [B,N,1] in [0..K-1]
+        # 离散 E 头：温度缩放 + 掩码 + 数值清洗，然后用 logits 构造分布
+        tau = max(float(getattr(self.cfg, "e_tau", 1.0)), 1e-6)
+        logits_E = logits_E / tau
+        if mask is not None:
+            m = mask.unsqueeze(-1).bool()
+            logits_E = logits_E.masked_fill(~m, -1e9)
+        logits_E = _sanitize_logits(logits_E)
+        cat = Categorical(logits=logits_E)
+        E_idx = cat.sample().unsqueeze(-1)  # [B,N,1] in [0..K-1]
         E = E_idx + self.cfg.E_min
         logp_E = cat.log_prob(E_idx.squeeze(-1))
-        entropy = tn.entropy + cat.entropy()
 
+        entropy = tn.entropy + cat.entropy()
         logp = logp_p + logp_E
         return dict(p=p, E=E, logp=logp, entropy=entropy)
 
@@ -209,18 +225,24 @@ class DualStreamActorCritic(nn.Module):
         # —— 数值兜底（避免 NaN/Inf） ——
         mu = torch.nan_to_num(mu, nan=0.0, posinf=50.0, neginf=-50.0).clamp(-50.0, 50.0)
         log_std = torch.nan_to_num(log_std, nan=-5.0, posinf=2.0, neginf=-20.0).clamp(-20.0, 2.0)
-        logits_E = torch.nan_to_num(logits_E, nan=0.0).clamp(-20.0, 20.0)
 
         # 连续动作 p：TanhNormal
         tn = TanhNormal(mu, log_std, low=self.cfg.p_low, high=self.cfg.p_high)
         logp_p = tn.log_prob(p)
 
-        # 离散动作 E：使用 logits 更稳
+        # 离散动作 E：温度缩放 + 掩码 + 数值清洗，然后用 logits 构造分布
+        tau = max(float(getattr(self.cfg, "e_tau", 1.0)), 1e-6)
+        logits_E = logits_E / tau
+        if mask is not None:
+            m = mask.unsqueeze(-1).bool()
+            logits_E = logits_E.masked_fill(~m, -1e9)
+        logits_E = _sanitize_logits(torch.nan_to_num(logits_E, nan=0.0))
         cat = Categorical(logits=logits_E)
         # 将环境传回的 E ∈ [E_min, E_max] 映射到 [0, num_E-1]
         E_idx = (E - self.cfg.E_min).clamp(0, self.num_E - 1).squeeze(-1).long()
         logp_E = cat.log_prob(E_idx)
 
         entropy = tn.entropy + cat.entropy()
+        entropy = torch.where(torch.isfinite(entropy), entropy, torch.zeros_like(entropy))
         logp = logp_p + logp_E
         return dict(logp=logp, entropy=entropy, V=V)
