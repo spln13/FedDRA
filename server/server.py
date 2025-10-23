@@ -161,6 +161,7 @@ class Server(object):
         if N == 0:
             return {}
 
+
         total_client_wait_time = self.cal_wait_time(do_times)
         print(f"[Round {self.round_id}] Total client wait time: {total_client_wait_time:.2f}s")
         # ===== B) 构造 PPO 状态 =====
@@ -195,9 +196,10 @@ class Server(object):
         prev_p_tensor = torch.tensor([[[x] for x in prev_p]], dtype=torch.float32, device=self.device)  # 之前剪枝率的tensor
 
         # ===== C) 写入经验 (state, action, reward) =====
-        # 1) 构造全局奖励（示例：R = α·ΔAcc - β·Tmax - γ·ΔT - λ·CommCost）
+        # 1) 构造全局奖励（示例：R = α·ΔAcc - β·Tmax - γ·ΔT）
         #    如果你有实际通信量，可据此计算 comm_cost；这里先置 0
         R = float(1.0 * dAcc - 0.01 * Tmax - 0.01 * dT - 0.05 * dP)
+        print("Round: {}, dAcc: {}, Tmax: {}, dT: {}, dP: {}, Reward: {}".format(self.round_id, dAcc, Tmax, dT, dP, R))
         self.rewards.append(R)
         # 2) 动作张量（形状与 PPO 网络一致）
         p_tensor = torch.tensor([[[x] for x in p_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
