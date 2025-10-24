@@ -13,10 +13,9 @@ from models.mini_vgg import MiniVGG
 from PPO import TwoStageConfig, TwoStagePPO
 
 
-
 class Server(object):
     def __init__(self, device, clients, dataset, model_name='MiniVGG',
-                 d_glob=6, d_cli=7, p_low=0.2, p_high=0.9, E_min=1, E_max=5, hidden=256, batch_norm=True,
+                 prune_bins=(0., 0.1, 0.2, 0.3, 0.4), E_min=1, E_max=5, hidden=256, batch_norm=True,
                  warmup_rounds=10):
         self.device = device  # 'cpu' or 'cuda'
         self.clients = clients  # list of Client objects
@@ -34,7 +33,9 @@ class Server(object):
         self.ppo_config.s2.s2_dim = 6  # [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
         # 剪枝动作：使用离散档，基于传入的 p_low/p_high 给一个5档示例（可按需自定义）
         self.ppo_config.s1.use_discrete_bins = True
-        self.ppo_config.s1.prune_bins = (p_low, max(p_low, 0.35), 0.5, min(0.65, p_high), p_high)
+        # self.ppo_config.s1.prune_bins = (p_low, max(p_low, 0.35), 0.5, min(0.65, p_high), p_high)
+        self.ppo_config.s1.prune_bins = prune_bins
+
         # 轮数总预算（softmax后分配给各客户端），以客户端数量和上限估一个起点
         self.ppo_config.s2.tau_total = max(1, len(self.clients) * max(1, E_max) // 2)
         # 公共超参（可按需微调）
@@ -52,7 +53,6 @@ class Server(object):
         self.agent.cfg.E_max = E_max
 
         self.ppo_update_every = 3
-
 
         # --- Warmup & Mixing ---
         self.warmup_rounds = warmup_rounds  # 前10轮不用PPO，只用规则/混合
@@ -235,7 +235,7 @@ class Server(object):
         T_epoch = [t / max(e, 1) for t, e in zip(times, E_exec)]
         T_epoch = np.array(T_epoch, dtype=np.float32)
         Tmin = float(T_epoch.min()) if len(T_epoch) else 1.0
-        t_norm = (T_epoch / max(Tmin, 1e-6)).tolist()   # 归一化后的端侧时延（HAPFL核心信号）
+        t_norm = (T_epoch / max(Tmin, 1e-6)).tolist()  # 归一化后的端侧时延（HAPFL核心信号）
 
         # s1[i] = [t_norm_i, acc_i, |D_i|_norm, H_i, p_prev_i, E_prev_i_norm]
         D_max = float(max(sizes)) if sizes else 1.0
@@ -268,7 +268,8 @@ class Server(object):
         # 注意：严格 on-policy 需缓存“下发时的 (s,a,logp)”，这里用近似（工程上可行）
         s1_mean = s1.mean(dim=0, keepdim=True)  # [1, d_s1]：用均值作全局近似
         self.agent.store_transition_stage1(s=s1_mean, a=torch.zeros(N, dtype=torch.long, device=self.device),
-                                           logp=torch.zeros(N, device=self.device), v=torch.zeros(1,1, device=self.device),
+                                           logp=torch.zeros(N, device=self.device),
+                                           v=torch.zeros(1, 1, device=self.device),
                                            r=R1, s_next=s1_mean, done=0)
 
         # s2_global: [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
@@ -277,18 +278,18 @@ class Server(object):
         G = (1.0 + (1.0 - p_obs)).cpu().numpy()  # 线性近似：剪得少→更慢
         Tm = (T_epoch * G).astype(np.float32)
         if len(Tm) > 0:
-            s2_feat = torch.tensor([[float(Tm.min()), float(Tm.mean()), float(Tm.max()), float(Tm.std()+1e-8),
+            s2_feat = torch.tensor([[float(Tm.min()), float(Tm.mean()), float(Tm.max()), float(Tm.std() + 1e-8),
                                      float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
         else:
             s2_feat = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
         # 存 stage2 的 (s, a≈argmax, logp≈logmaxprob, r, s_next)
-        self.agent.store_transition_stage2(s=s2_feat, a_logits=torch.zeros(1, max(N,1), device=self.device),
-                                           v=torch.zeros(1,1, device=self.device), r=R2, s_next=s2_feat, done=0)
+        self.agent.store_transition_stage2(s=s2_feat, a_logits=torch.zeros(1, max(N, 1), device=self.device),
+                                           v=torch.zeros(1, 1, device=self.device), r=R2, s_next=s2_feat, done=0)
 
         # ===== E) 用策略为“下一轮”生成动作 =====
         with torch.no_grad():
             # PPO1：逐客户端剪枝率
-            out1 = self.agent.select_pruning(s1)   # {'p': [N,1], 'a', 'logp', 'v'}
+            out1 = self.agent.select_pruning(s1)  # {'p': [N,1], 'a', 'logp', 'v'}
             p_ppo = out1['p'].squeeze(-1).tolist()
 
             # 基于 p_ppo 估计下一轮剪枝后的单位epoch时间 Tm_pred
@@ -296,13 +297,14 @@ class Server(object):
             G_next = (1.0 + (1.0 - p_vec))
             Tm_pred = (T_epoch * G_next).astype(np.float32)
             if len(Tm_pred) > 0:
-                s2_next = torch.tensor([[float(Tm_pred.min()), float(Tm_pred.mean()), float(Tm_pred.max()), float(Tm_pred.std()+1e-8),
-                                         float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
+                s2_next = torch.tensor(
+                    [[float(Tm_pred.min()), float(Tm_pred.mean()), float(Tm_pred.max()), float(Tm_pred.std() + 1e-8),
+                      float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
             else:
                 s2_next = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
 
             # PPO2：softmax 分配本地轮数（总预算 tau_total）
-            out2 = self.agent.select_epochs(s2_next, k=N)   # {'E':[N], 'probs', 'v', 'logits'}
+            out2 = self.agent.select_epochs(s2_next, k=N)  # {'E':[N], 'probs', 'v', 'logits'}
             E_ppo = [int(x) for x in out2['E'].tolist()]
 
         # 规则策略（便于 warmup 与混合）
@@ -316,14 +318,16 @@ class Server(object):
             final_p = new_p if self._allow_change(client.id, old_p, new_p) else old_p
             client.cur_pruning_rate = float(np.clip(final_p, 0.0, 1.0))
             client.training_intensity = int(max(1, E_next[i]))
-            print(f"[Round {self.round_id}] Client {client.id} -> next p={client.cur_pruning_rate:.4f}, E={client.training_intensity}")
+            print(
+                f"[Round {self.round_id}] Client {client.id} -> next p={client.cur_pruning_rate:.4f}, E={client.training_intensity}")
 
         # ===== F) 统计刷新 & 条件更新 PPO =====
         self.prev_acc = acc_now
         self.round_id += 1
 
         # 触发两套 PPO 更新（可沿用原来的 ppo_update_every）
-        if (self.round_id > self.warmup_rounds) and (len(self.agent.buf1) + len(self.agent.buf2) >= self.ppo_update_every):
+        if (self.round_id > self.warmup_rounds) and (
+                len(self.agent.buf1) + len(self.agent.buf2) >= self.ppo_update_every):
             out_s1 = self.agent.ppo_update_stage1()
             out_s2 = self.agent.ppo_update_stage2()
             print("PPO1 updated ✅", out_s1)

@@ -46,3 +46,7 @@ class TwoStageConfig:
     common: PPOCommonCfg = PPOCommonCfg()
     s1: Stage1Cfg = Stage1Cfg()
     s2: Stage2Cfg = Stage2Cfg()
+    p_low: float = 0.  # 最低剪枝率
+    p_high: float = 0.5  # 最高剪枝率
+    E_min: int = 1
+    E_max: int = 19
