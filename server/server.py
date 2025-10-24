@@ -10,7 +10,8 @@ from torch.utils.data import DataLoader
 from utils.utils import read_client_data
 from models.mnist_net import MNISTNet
 from models.mini_vgg import MiniVGG
-from PPO import DualStreamConfig, DualStreamPPO
+from PPO import TwoStageConfig, TwoStagePPO
+
 
 
 class Server(object):
@@ -21,16 +22,37 @@ class Server(object):
         self.clients = clients  # list of Client objects
         self.dataset = dataset  # string
         self.round_id = 0
-        self.prev_acc = 0.0  # 上一轮全局模型精度
-        self.ppo_config = DualStreamConfig(d_glob=d_glob, d_cli=d_cli,
-                                           p_low=p_low, p_high=p_high, E_min=E_min, E_max=E_max,
-                                           hidden=hidden)
-
-        self.agent = DualStreamPPO(self.ppo_config)
-        self.ppo_update_every = 3
         self.init_models_save_path = './init_models/'
         self.model_name = model_name
         self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
+        self.prev_acc = 0.0  # 上一轮全局模型精度
+
+        # ==== Two-Stage PPO 初始化 ====
+        self.ppo_config = TwoStageConfig(device=self.device)
+        # 对齐我们在 generate_next_round_params 里构造的状态维度
+        self.ppo_config.s1.s1_dim = 6  # [t_norm, acc_i, |D_i|_norm, H_i, p_prev_i, E_prev_i_norm]
+        self.ppo_config.s2.s2_dim = 6  # [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
+        # 剪枝动作：使用离散档，基于传入的 p_low/p_high 给一个5档示例（可按需自定义）
+        self.ppo_config.s1.use_discrete_bins = True
+        self.ppo_config.s1.prune_bins = (p_low, max(p_low, 0.35), 0.5, min(0.65, p_high), p_high)
+        # 轮数总预算（softmax后分配给各客户端），以客户端数量和上限估一个起点
+        self.ppo_config.s2.tau_total = max(1, len(self.clients) * max(1, E_max) // 2)
+        # 公共超参（可按需微调）
+        self.ppo_config.common.lr = 3e-4
+        self.ppo_config.common.clip_coef = 0.2
+        self.ppo_config.common.gae_lambda = 0.95
+        self.ppo_config.common.target_kl = 0.02
+
+        # 创建两阶段 PPO 管理器
+        self.agent = TwoStagePPO(self.ppo_config)
+        # 兼容规则策略/其它函数对区间与边界的读取
+        self.agent.cfg.p_low = min(self.ppo_config.s1.prune_bins)
+        self.agent.cfg.p_high = max(self.ppo_config.s1.prune_bins)
+        self.agent.cfg.E_min = E_min
+        self.agent.cfg.E_max = E_max
+
+        self.ppo_update_every = 3
+
 
         # --- Warmup & Mixing ---
         self.warmup_rounds = warmup_rounds  # 前10轮不用PPO，只用规则/混合
@@ -166,18 +188,18 @@ class Server(object):
 
     def generate_next_round_params(self):
         """
-        Server 流程：
-          A. 收集本轮各 client 的结果指标（这些指标对应“本轮动作”的效果）
-          B. 构造 PPO 的 S_glob / S_cli / mask
-          C. 写入 (state, action, reward) 到 PPO buffer
-          D. 用策略生成“下一轮动作”并下发
-          E. 到达间隔则 ppo_update()
+        Two-Stage PPO 流程（参考 HAPFL）：
+          A. 收集本轮各 client 的结果（对应“上一轮动作”的效果）
+          B. 构造两阶段状态：s1（逐客户端）与 s2_global（全局）
+          C. 写入两阶段 (s,a,r) 到各自 PPO 缓冲
+          D. 用 PPO1 产生“下一轮剪枝率”，用 PPO2 产生“下一轮训练轮数”
+          E. 规则混合 / 冷却滞回，设置到各客户端
+          F. 条件触发：分别更新两套 PPO
         约定 client.feddra_do() 返回：
           acc, total_time, entropy, local_data_size, client_id,
           client_last_pruning_rate, client_epochs, avg_loss, client_do_time
         """
-
-        # ===== A) 收集 client 指标（本轮已执行的动作及结果） =====
+        # ===== A) 收集指标 =====
         times, entropies, sizes, do_times = [], [], [], []
         p_exec, E_exec, losses, ids, accs, prev_p = [], [], [], [], [], []
 
@@ -188,12 +210,12 @@ class Server(object):
             times.append(float(total_time))
             entropies.append(float(entropy))
             sizes.append(int(local_data_size))
-            p_exec.append(float(client_last_pruning_rate))  # 本轮“实际执行”的剪枝率
-            E_exec.append(int(client_epochs))  # 本轮“实际执行”的本地轮数
+            p_exec.append(float(client_last_pruning_rate))
+            E_exec.append(int(client_epochs))
             losses.append(float(avg_loss))
             ids.append(int(client_id))
             accs.append(float(acc))
-            prev_p.append(float(client.last_pruning_rate))  # 上轮下发/生效的剪枝率
+            prev_p.append(float(client.last_pruning_rate))
             do_times.append(float(client_do_time))
 
         N = len(self.clients)
@@ -203,165 +225,113 @@ class Server(object):
         total_client_wait_time = self.cal_wait_time(do_times)
         print(f"[Round {self.round_id}] Total client wait time: {total_client_wait_time:.2f}s")
 
-        # ===== B) 构造 PPO 状态 =====
-        # 全局特征 S_glob: [Acc, dAcc, Tmax, dT, round_id, bw]
+        # ===== B) 构造两阶段状态 =====
+        # 全局精度 & 差分
         acc_now = float(sum(accs) / max(len(accs), 1))
         prev_acc = float(getattr(self, "prev_acc", 0.0))
         dAcc = acc_now - prev_acc
-        Tmax = float(max(times)) if times else 0.0
-        dT = float(max(times) - min(times)) if len(times) > 1 else 0.0  # 继续保留给 S_glob
-        stdT = float(np.std(np.array(times, dtype=np.float32))) if len(times) > 1 else 0.0  # 用于奖励更稳
-        bw = 1.0
-        # Δp：逐客户端平均绝对差
-        dP = float(
-            np.mean(np.abs(np.array(p_exec, dtype=np.float32) - np.array(prev_p, dtype=np.float32)))
-        ) if N > 0 else 0.0
 
-        S_glob = torch.tensor([[acc_now, dAcc, Tmax, dT, float(getattr(self, "round_id", 0)), bw]],
-                              dtype=torch.float32, device=self.device)  # [1, 6]
+        # per-epoch 时间（上一轮实际执行结果）
+        T_epoch = [t / max(e, 1) for t, e in zip(times, E_exec)]
+        T_epoch = np.array(T_epoch, dtype=np.float32)
+        Tmin = float(T_epoch.min()) if len(T_epoch) else 1.0
+        t_norm = (T_epoch / max(Tmin, 1e-6)).tolist()   # 归一化后的端侧时延（HAPFL核心信号）
 
-        # 客户端特征 S_cli（7维）：[T_i, H_i, |D_i|, id_emb, p_prev, E_prev, loss_prev]
-        rows = []
+        # s1[i] = [t_norm_i, acc_i, |D_i|_norm, H_i, p_prev_i, E_prev_i_norm]
+        D_max = float(max(sizes)) if sizes else 1.0
+        E_max = float(self.agent.cfg.s2.tau_total if hasattr(self.agent.cfg, 's2') else max(E_exec + [1]))
+        s1_rows = []
         for i in range(N):
-            rows.append([
-                times[i],
-                entropies[i],
-                sizes[i],
-                float(ids[i]),  # 可换成 learnable embedding
-                p_exec[i],  # 本轮实际动作：剪枝率
-                E_exec[i],  # 本轮实际动作：epochs
-                losses[i],
+            s1_rows.append([
+                float(t_norm[i]),
+                float(accs[i]),
+                float(sizes[i] / max(D_max, 1e-6)),
+                float(entropies[i]),
+                float(prev_p[i]),
+                float(E_exec[i] / max(E_max, 1.0)),
             ])
-        S_cli = torch.tensor([rows], dtype=torch.float32, device=self.device)  # [1, N, 7]
-        mask = torch.ones(1, N, dtype=torch.float32, device=self.device)
-        prev_p_tensor = torch.tensor([[[x] for x in prev_p]], dtype=torch.float32, device=self.device)
+        s1 = torch.tensor(s1_rows, dtype=torch.float32, device=self.device)  # [N, d_s1]
 
-        # ===== C) 写入经验 (state, action, reward) =====
-        # ---- 奖励：进展(Imp) + 水平(Level) + 效率(Eff) - 时间异质性(stdT) - Δp + 软SLA (+可选E成本/预算) ----
-        # 首轮/基线保护
-        if self.round_id == 0 and getattr(self, "ema_acc", 0.0) == 0.0:
-            self.ema_acc = acc_now
-            self.best_acc = acc_now
+        # ===== C) 两阶段奖励（基于上一轮结果） =====
+        # R1：拉平单位epoch时长（max/min 越小越好）
+        ratio_mm = (T_epoch.max() / max(T_epoch.min(), 1e-6)) if len(T_epoch) else 1.0
+        MD = 1.5  # acceptable上限，可调
+        R1 = float(MD - ratio_mm)
 
-        # 进展：相对 EMA 基线（避免后期 dAcc→0 无奖励）
-        Imp_raw = acc_now - self.ema_acc
+        # R2：总训练时长的极差（min - max，最大化约等于最小化拖尾差）
+        if len(times) > 0:
+            R2 = float(min(times) - max(times))
+        else:
+            R2 = 0.0
 
-        # 水平：相对目标（历史最优的 95% 或不低于 0.8）
-        A_target = max(0.8, 0.95 * float(getattr(self, "best_acc", acc_now)))
-        tau_A = 0.02
-        Level_raw = 1.0 / (1.0 + np.exp(-(acc_now - A_target) / max(tau_A, 1e-6)))  # sigmoid(acc_now - A_target)
+        # ===== D) 先写入 buffer（使用当前状态作为 s 与 s_next 的简化做法） =====
+        # 注意：严格 on-policy 需缓存“下发时的 (s,a,logp)”，这里用近似（工程上可行）
+        s1_mean = s1.mean(dim=0, keepdim=True)  # [1, d_s1]：用均值作全局近似
+        self.agent.store_transition_stage1(s=s1_mean, a=torch.zeros(N, dtype=torch.long, device=self.device),
+                                           logp=torch.zeros(N, device=self.device), v=torch.zeros(1,1, device=self.device),
+                                           r=R1, s_next=s1_mean, done=0)
 
-        # 使用 __init__ 里创建的 EMA 归一化器
-        Imp_n = self.norm_imp.norm(Imp_raw)
-        Tmax_n = self.norm_tmax.norm(Tmax)
-        stdT_n = self.norm_stdT.norm(stdT)
-        dP_n = self.norm_dp.norm(dP)
+        # s2_global: [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
+        # 先用上轮“观察到”的剪枝率估计一个 Tm 占位（为了写 buffer 与下一步选择保持同形）
+        p_obs = torch.tensor(p_exec, dtype=torch.float32, device=self.device).clamp(0.0, 1.0)
+        G = (1.0 + (1.0 - p_obs)).cpu().numpy()  # 线性近似：剪得少→更慢
+        Tm = (T_epoch * G).astype(np.float32)
+        if len(Tm) > 0:
+            s2_feat = torch.tensor([[float(Tm.min()), float(Tm.mean()), float(Tm.max()), float(Tm.std()+1e-8),
+                                     float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
+        else:
+            s2_feat = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
+        # 存 stage2 的 (s, a≈argmax, logp≈logmaxprob, r, s_next)
+        self.agent.store_transition_stage2(s=s2_feat, a_logits=torch.zeros(1, max(N,1), device=self.device),
+                                           v=torch.zeros(1,1, device=self.device), r=R2, s_next=s2_feat, done=0)
 
-        # 效率：进展/时间（归一化尺度内计算）
-        Eff = Imp_n / (abs(Tmax_n) + 1e-3)
-
-        # 软 SLA：Tmax 超标时柔性惩罚
-        T_target = float(np.median(np.array(times, dtype=np.float32)) * 1.1) if len(times) else 0.0
-        tau_T = 0.5
-        r_sla = - float(torch.nn.functional.softplus(
-            torch.tensor((Tmax - T_target) / (tau_T + 1e-6))
-        ).item())
-
-        # 合成奖励（从 self 读取系数）
-        alpha = float(getattr(self, "alpha_acc", 1.0))  # 进展
-        beta = float(getattr(self, "beta_level", 0.4))  # 水平
-        kappa = float(getattr(self, "kappa_eff", 0.3))  # 效率
-        lam_T = float(getattr(self, "lambda_T", 0.3))  # 异质性
-        lam_p = float(getattr(self, "lambda_p", 0.2))  # Δp 平滑
-
-        R = alpha * Imp_n + beta * Level_raw + kappa * Eff \
-            - lam_T * stdT_n - lam_p * dP_n + r_sla
-
-        # （可选）E 成本：算力/速度感知；只有当 self.lambda_E>0 才启用
-        lambda_E = float(getattr(self, "lambda_E", 0.0))
-        if lambda_E > 0.0 and N > 0:
-            ci_list = []
-            for i in range(N):
-                ci = times[i] / max(E_exec[i], 1)  # 每轮平均耗时（慢设备更大）
-                self.norm_ci.update(ci)
-                ci_list.append(self.norm_ci.norm(ci))
-            cost_E = float(np.mean([ci_list[i] * E_exec[i] for i in range(N)]))
-            R -= lambda_E * cost_E
-
-        # （可选）总预算：sum(E_i) 不宜超过 N*E0；只有当 self.lambda_budget>0 才启用
-        lambda_budget = float(getattr(self, "lambda_budget", 0.0))
-        if lambda_budget > 0.0 and N > 0:
-            E0 = int(getattr(self, "E0_mean", 10))  # 期望均值（例如 10）
-            B = N * E0
-            over = max(0, int(sum(E_exec)) - B)
-            R -= lambda_budget * (over ** 2)
-
-        print(
-            f"Round {self.round_id}: acc_now={acc_now:.4f} dAcc={dAcc:.4f} Tmax={Tmax:.2f} stdT={stdT:.2f} dP={dP:.4f} -> Reward={R:.4f}")
-        self.rewards.append(float(R))
-
-        # 更新 EMA 基线与统计
-        self.ema_acc = 0.95 * self.ema_acc + 0.05 * acc_now
-        self.best_acc = max(self.best_acc, acc_now)
-        self.norm_imp.update(Imp_raw)
-        self.norm_tmax.update(Tmax)
-        self.norm_stdT.update(stdT)
-        self.norm_dp.update(dP)
-
-        # 2) 动作张量（形状与 PPO 网络一致）
-        p_tensor = torch.tensor([[[x] for x in p_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
-        E_tensor = torch.tensor([[[x] for x in E_exec]], dtype=torch.float32, device=self.device)  # [1, N, 1]
-
-        # 3) 价值与 logp
-        #    ✅ 最佳：用“下发时缓存的 old_logp”；若无，这里 evaluate 近似
-        eval_out = self.agent.net.evaluate_actions(S_glob, S_cli, p_tensor, E_tensor, mask)
-        V_now = eval_out["V"].detach()  # [1, N, 1]
-        logp_now = eval_out["logp"].detach()  # [1, N]
-
-        # 4) 写入 buffer
-        self.agent.store_transition(dict(
-            S_glob=S_glob, S_cli=S_cli, mask=mask,
-            p=p_tensor, E=E_tensor,
-            logp=logp_now,  # 若你有缓存 old_logp，请替换此处
-            V=V_now,
-            reward=torch.tensor([[R]], dtype=torch.float32, device=self.device),
-            done=torch.zeros(1, 1, device=self.device),
-            prev_p=prev_p_tensor
-        ))
-
-        # ===== D) 用策略为“下一轮”生成动作并下发 =====
+        # ===== E) 用策略为“下一轮”生成动作 =====
         with torch.no_grad():
-            out_next = self.agent.select_actions(S_glob, S_cli, mask, prev_p=prev_p_tensor)
-        p_ppo = out_next["p"][0, :, 0].tolist()
-        E_ppo = [int(x) for x in out_next["E"][0, :, 0].tolist()]
+            # PPO1：逐客户端剪枝率
+            out1 = self.agent.select_pruning(s1)   # {'p': [N,1], 'a', 'logp', 'v'}
+            p_ppo = out1['p'].squeeze(-1).tolist()
 
-        # 规则动作
+            # 基于 p_ppo 估计下一轮剪枝后的单位epoch时间 Tm_pred
+            p_vec = out1['p'].squeeze(-1).clamp(0.0, 1.0).cpu().numpy()
+            G_next = (1.0 + (1.0 - p_vec))
+            Tm_pred = (T_epoch * G_next).astype(np.float32)
+            if len(Tm_pred) > 0:
+                s2_next = torch.tensor([[float(Tm_pred.min()), float(Tm_pred.mean()), float(Tm_pred.max()), float(Tm_pred.std()+1e-8),
+                                         float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
+            else:
+                s2_next = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
+
+            # PPO2：softmax 分配本地轮数（总预算 tau_total）
+            out2 = self.agent.select_epochs(s2_next, k=N)   # {'E':[N], 'probs', 'v', 'logits'}
+            E_ppo = [int(x) for x in out2['E'].tolist()]
+
+        # 规则策略（便于 warmup 与混合）
         p_rule, E_rule = self._rule_policy(times, entropies)
-        # ε-混合（热身期优先规则，随后退火）
         p_next, E_next = self._mix_actions(p_ppo, E_ppo, p_rule, E_rule)
 
-        # 冷却/滞回：是否采纳新 p；并设置下一轮的训练轮数
+        # 冷却/滞回并下发
         for i, client in enumerate(self.clients):
             old_p = float(getattr(client, "cur_pruning_rate", p_next[i]))
             new_p = float(p_next[i])
             final_p = new_p if self._allow_change(client.id, old_p, new_p) else old_p
-            client.cur_pruning_rate = final_p
-            client.training_intensity = int(E_next[i])
-            # 可选：缓存下发时的 logp，严格 on-policy 时在下轮写入 buffer
-            client.last_action_logp = float(out_next["logp"][0, i].item())
-            print(f"[Round {self.round_id}] Client {client.id} -> next p={final_p:.4f}, E={client.training_intensity}")
+            client.cur_pruning_rate = float(np.clip(final_p, 0.0, 1.0))
+            client.training_intensity = int(max(1, E_next[i]))
+            print(f"[Round {self.round_id}] Client {client.id} -> next p={client.cur_pruning_rate:.4f}, E={client.training_intensity}")
 
-        # ===== E) 更新 PPO =====
+        # ===== F) 统计刷新 & 条件更新 PPO =====
         self.prev_acc = acc_now
         self.round_id += 1
 
-        if (self.round_id > self.warmup_rounds) and (len(self.agent.buffer.data) >= self.ppo_update_every):
-            self.agent.ppo_update(epochs=4, batch_size=256, normalize_adv=True)
-            print("PPO updated ✅")
+        # 触发两套 PPO 更新（可沿用原来的 ppo_update_every）
+        if (self.round_id > self.warmup_rounds) and (len(self.agent.buf1) + len(self.agent.buf2) >= self.ppo_update_every):
+            out_s1 = self.agent.ppo_update_stage1()
+            out_s2 = self.agent.ppo_update_stage2()
+            print("PPO1 updated ✅", out_s1)
+            print("PPO2 updated ✅", out_s2)
 
-        # 返回给上层（可选）
+        # 返回（可选）
         return {c.id: dict(pruning_rate=float(getattr(c, "cur_pruning_rate", 0.0)),
-                           epochs=int(getattr(c, "training_intensity", getattr(self.agent.cfg, "E_min", 1))))
+                           epochs=int(getattr(c, "training_intensity", 1)))
                 for c in self.clients}
 
     def aggregate(self):

@@ -1,3 +1,2 @@
-# -*- coding: utf-8 -*-
-from .config import DualStreamConfig
-from .trainer import DualStreamPPO
+from .config import TwoStageConfig, PPOCommonCfg, Stage1Cfg, Stage2Cfg
+from .trainer import TwoStagePPO
