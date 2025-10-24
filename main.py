@@ -39,7 +39,7 @@ def fedAvg(args):
     cal_run_time(server)
 
 
-def fedbn(args):
+def fedBN(args):
     # 这里弄fedavg的算法流程
     client_nums = 10
     model_name = 'MiniVGG'
@@ -133,7 +133,7 @@ def main():
         "--algo",
         type=str,
         default="fedDRA",
-        choices=["fedDRA", "fedAvg"],
+        choices=["fedDRA", "fedAvg", "fedBN"],
         help="选择要运行的算法: fedDRA 或 fedAvg (默认: fedDRA)"
     )
 
@@ -152,6 +152,9 @@ def main():
     elif args.algo.lower() == "feddra":
         print("Running FedDRA...")
         fedDRA(args)
+    elif args.algo.lower() == "fedbn":
+        print("Running FedBN...")
+        fedBN(args)
     else:
         raise ValueError(f"未知算法: {args.algo}")
 
@@ -163,4 +166,5 @@ if __name__ == '__main__':
 # 测试命令
 # nohup python main.py --algo fedDRA > logs/fedDRA_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
 # nohup python main.py --algo fedAvg --epochs 10 > logs/fedAvg_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
+# nohup python main.py --algo fedBN --epochs 10 > logs/fedAvg_$(date +%Y%m%d_%H%M%S).txt 2>&1 &
 
