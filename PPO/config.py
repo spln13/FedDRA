@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-from dataclasses import dataclass
+# PPO/config.py
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -13,40 +13,36 @@ class PPOCommonCfg:
     max_grad_norm: float = 1.0
     update_epochs: int = 4
     batch_size: int = 256
-    # 训练稳定
     target_kl: float = 0.02
 
 
 @dataclass
 class Stage1Cfg:
     # —— PPO1（剪枝率/剪枝档）——
-    # 你可以二选一：离散档 or 连续率
     use_discrete_bins: bool = True
-    prune_bins: tuple = (0.2, 0.35, 0.5, 0.65, 0.8)  # 离散剪枝档
+    prune_bins: tuple = (0.2, 0.35, 0.5, 0.65, 0.8)  # 离散剪枝档（元组是不可变的，OK）
     p_min: float = 0.2
     p_max: float = 0.8
-    s1_dim: int = 6  # 输入维度（根据你构造的 s1[i] 决定）
-    # 探索温度（仅离散时有效）
-    tau_e: float = 1.2
+    s1_dim: int = 6
+    tau_e: float = 1.2  # 离散温度
 
 
 @dataclass
 class Stage2Cfg:
     # —— PPO2（E 分配）——
-    s2_dim: int = 6  # 输入维度（根据你构造的 s2[i] 或 s2_global 决定）
-    # 对参与的 k 个客户端做softmax分配
-    # 你可以固定总预算 tau_total，再有：E[i] = round(softmax_i * tau_total)
-    tau_total: int = 10
-    tau_e: float = 1.2  # softmax温度（调大更平均，调小更尖锐）
+    s2_dim: int = 6
+    tau_total: int = 10  # 每轮总训练轮数预算
+    tau_e: float = 1.2  # softmax 温度
 
 
 @dataclass
 class TwoStageConfig:
     device: str = "cuda"
-    common: PPOCommonCfg = PPOCommonCfg()
-    s1: Stage1Cfg = Stage1Cfg()
-    s2: Stage2Cfg = Stage2Cfg()
-    p_low: float = 0.  # 最低剪枝率
-    p_high: float = 0.5  # 最高剪枝率
+    common: PPOCommonCfg = field(default_factory=PPOCommonCfg)
+    s1: Stage1Cfg = field(default_factory=Stage1Cfg)
+    s2: Stage2Cfg = field(default_factory=Stage2Cfg)
+    # 兼容 server 里规则策略与边界读取
+    p_low: float = 0.2  # 最低剪枝率
+    p_high: float = 0.9  # 最高剪枝率
     E_min: int = 1
     E_max: int = 19
