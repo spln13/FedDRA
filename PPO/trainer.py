@@ -23,17 +23,38 @@ class _PPOCore:
         )
 
     def _compute_adv(self, r, v, v_next, done):
-        # r, v, v_next, done: [T, 1]
-        gamma, lam = self.cfg.gamma, self.cfg.gae_lambda
+        """
+        r, v, v_next, done: [T, *tail]
+        tail 可以是 [1] 或 [B,1] 等；本函数自适应。
+        返回:
+        adv, ret: 与 v 同形
+        """
+        cfg = self.cfg
+        r      = r.float()
+        v      = v.float()
+        v_next = v_next.float()
+        done   = done.float()
+
+        T = r.shape[0]
+        tail_shape = tuple(v.shape[1:])  # e.g. (1,) or (B,1)
+
+        adv = torch.zeros((T,)+tail_shape, device=r.device, dtype=r.dtype)
+        gae = torch.zeros(tail_shape, device=r.device, dtype=r.dtype)
+
+        gamma, lam = cfg.gamma, cfg.gae_lambda
         with torch.no_grad():
-            delta = r + gamma * (1 - done) * v_next - v
-            adv = torch.zeros_like(r)
-            gae = 0.0
-            for t in reversed(range(len(r))):
-                gae = delta[t] + gamma * lam * (1 - done[t]) * gae
+            for t in reversed(range(T)):
+                delta_t = r[t] + gamma * (1.0 - done[t]) * v_next[t] - v[t]
+                gae = delta_t + gamma * lam * (1.0 - done[t]) * gae
                 adv[t] = gae
+
             ret = adv + v
-            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+
+            # 归一化 advantage（对所有元素做一次全局归一化）
+            adv_flat = adv.view(T, -1)
+            adv_flat = (adv_flat - adv_flat.mean()) / (adv_flat.std() + 1e-8)
+            adv = adv_flat.view_as(adv)
+
         return adv, ret
 
     def update_discrete(self, traj):
@@ -198,18 +219,24 @@ class TwoStagePPO:
 
     def store_transition_stage2(self, s, a_logits, v, r, s_next, done):
         """
-        a_logits: [1,k] 对本轮k个客户端的打分logits（配合 softmax 分配E）
-        为了兼容 Categorical，这里把“动作”存成 one-hot 近似/或存 logits 本身再重算logp。
-        简化版：直接把概率向量当作“软动作”，只训练 value，用奖励指导（工程上足够）。
+        a_logits: [1, k] 对本轮 k 个客户端的打分logits（配合 softmax 分配E）
+        这里把 a_logits 也存进 buffer（或至少把 k 存进去），便于 update 阶段重建 actor 的输出维度。
         """
-        # 这里选择：存“伪动作”为概率的 argmax，保证能计算 logp（更接近标准PPO）
         with torch.no_grad():
-            probs = torch.softmax(a_logits, dim=-1)
-            a = torch.argmax(probs, dim=-1)  # [1]
-            logp = torch.log(probs[0, a])
-        self.buf2.add(s=s, a=a, logp=logp, v=v, r=torch.tensor([r], device=self.device),
-                      s_next=s_next, done=torch.tensor([done], device=self.device))
+            probs = torch.softmax(a_logits, dim=-1)  # [1,k]
+            a = torch.argmax(probs, dim=-1)          # [1]
+            logp = torch.log(probs[0, a])            # [1]
 
+        # ✅ 关键：把 a_logits 以及 k 存起来
+        k_tensor = torch.tensor([a_logits.shape[-1]], device=self.device, dtype=torch.long)
+
+        self.buf2.add(
+            s=s, a=a, logp=logp, v=v,
+            r=torch.tensor([r], device=self.device),
+            s_next=s_next, done=torch.tensor([done], device=self.device),
+            a_logits=a_logits.detach(),   # <—— 新增
+            k=k_tensor                    # <—— 新增（冗余但安全）
+        )
     # ========== 更新 ==========
     def ppo_update_stage1(self):
         if len(self.buf1) == 0: return {}
@@ -227,15 +254,56 @@ class TwoStagePPO:
         self.buf1.clear()
         return outs
 
+
     def ppo_update_stage2(self):
-        if len(self.buf2) == 0: return {}
+        if len(self.buf2) == 0:
+            return {}
+
         traj = self.buf2.stack()
-        # 使用离散近似更新（见 store_transition_stage2 的说明）
-        outs = {}
-        for _ in range(self.cfg.common.update_epochs):
-            out = self.ppo2.update_discrete(traj)
-            outs = out
-            if out["kl"] > self.cfg.common.target_kl:
-                break
+        s       = traj["s"]
+        a       = traj["a"].long()
+        logp_old= traj["logp"]
+        v_old   = traj["v"]
+        r       = traj["r"]
+        s_next  = traj["s_next"]
+        done    = traj["done"]
+
+        # ✅ 关键：稳妥获取 k
+        if "k" in traj:
+            k = int(traj["k"][0].item())
+        elif "a_logits" in traj:
+            k = int(traj["a_logits"].shape[-1])
+        else:
+            raise RuntimeError("Need 'k' or 'a_logits' in buffer to infer number of clients (k).")
+
+        with torch.no_grad():
+            v_next = self.s2_critic(s_next)
+        adv, ret = self.ppo2._compute_adv(r, v_old, v_next, done)
+
+        logits = self.s2_actor(s, k)  # <<<<<< 需要 k
+        dist   = torch.distributions.Categorical(logits=logits)
+        logp   = dist.log_prob(a)
+        ratio  = (logp - logp_old).exp()
+
+        cfgc = self.cfg.common
+        surr1 = ratio * adv.squeeze(-1)
+        surr2 = torch.clamp(ratio, 1 - cfgc.clip_coef, 1 + cfgc.clip_coef) * adv.squeeze(-1)
+        actor_loss  = -torch.min(surr1, surr2).mean() - cfgc.ent_coef * dist.entropy().mean()
+
+        v = self.s2_critic(s)
+        critic_loss = torch.nn.functional.mse_loss(v, ret)
+
+        loss = actor_loss + cfgc.vf_coef * critic_loss
+        self.ppo2.opt.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(
+            list(self.s2_actor.parameters()) + list(self.s2_critic.parameters()),
+            cfgc.max_grad_norm
+        )
+        self.ppo2.opt.step()
+
+        approx_kl = (logp_old - logp).mean().clamp_min(0.0).item()
+        outs = dict(loss=loss.item(), actor=actor_loss.item(), critic=critic_loss.item(), kl=approx_kl)
+
         self.buf2.clear()
         return outs

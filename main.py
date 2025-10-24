@@ -73,7 +73,7 @@ def fedbn(args):
 
 
 def fedDRA(args):
-    client_nums = 10
+    client_nums = 5
     fl_rounds = 200
     model_name = 'MiniVGG'
     dataset = 'cifar10'
@@ -84,15 +84,15 @@ def fedDRA(args):
     d_cli = 7  # client侧特征维度
     p_low = 0.2  # 最低剪枝率
     p_high = 0.8  # 最高剪枝率
-    E_min = 1  # 最小训练轮次
-    E_max = 5  # 最大训练轮次
+    E_min = 3  # 最小训练轮次
+    E_max = 17  # 最大训练轮次
     hidden = 256  # PPO网络隐藏层维度
-    prune_bins = (0., 0.1, 0.2, 0.3, 0.4)
+    prune_bins = (0.1, 0.2, 0.3, 0.4)
     clients = []
     for i in range(client_nums):
         client = Client(i, device, model_name, 1, dataset, 16)
         clients.append(client)
-    server = Server(device, clients, dataset, model_name, prune_bins, E_min, E_max, batch_norm=True, warmup_rounds=20)
+    server = Server(device, clients, dataset, model_name, prune_bins, E_min, E_max, batch_norm=True, warmup_rounds=0)
     print("fedDRA Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")

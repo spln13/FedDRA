@@ -58,7 +58,7 @@ class Server(object):
         self.warmup_rounds = warmup_rounds  # 前10轮不用PPO，只用规则/混合
         self.mix_epsilon_start = 1.0  # 早期完全规则
         self.mix_epsilon_end = 0.0  # 退火到纯PPO
-        self.mix_epsilon_decay_rounds = 20  # ε 线性退火轮数
+        self.mix_epsilon_decay_rounds = 0  # ε 线性退火轮数
 
         # --- 动作稳定 / 冷却 / TTL ---
         self.delta_eps = getattr(self, "delta_eps", 0.05)  # 剪枝率变更的滞回阈值（5%）
@@ -311,15 +311,42 @@ class Server(object):
         p_rule, E_rule = self._rule_policy(times, entropies)
         p_next, E_next = self._mix_actions(p_ppo, E_ppo, p_rule, E_rule)
 
-        # 冷却/滞回并下发
+        # —— 冷却/滞回并下发（附：吸附到最近bin + E边界裁剪）——
+        use_bins = getattr(self.agent.cfg.s1, "use_discrete_bins", True)
+        bins = None
+        if use_bins:
+            # 注意：bins 必须与 PPO1 的 prune_bins 一致
+            bins = torch.tensor(self.agent.cfg.s1.prune_bins, dtype=torch.float32).cpu()
+
+        E_min = int(getattr(self.agent.cfg, "E_min", 1))
+        E_max = int(getattr(self.agent.cfg, "E_max", 19))
+
+        def snap_to_bin(x: float) -> float:
+            if bins is None:  # 连续策略时不吸附
+                return float(x)
+            idx = int(torch.argmin(torch.abs(bins - x)).item())
+            return float(bins[idx].item())
+
         for i, client in enumerate(self.clients):
             old_p = float(getattr(client, "cur_pruning_rate", p_next[i]))
-            new_p = float(p_next[i])
+            # 先对 p_next 做一次吸附（保证规则混合/数值扰动后也落在 bins 上）
+            cand_p = snap_to_bin(float(p_next[i])) if use_bins else float(p_next[i])
+
+            # 冷却/滞回：若变化小于阈值或未过冷却期，则保持原值
+            new_p = cand_p
             final_p = new_p if self._allow_change(client.id, old_p, new_p) else old_p
-            client.cur_pruning_rate = float(np.clip(final_p, 0.0, 1.0))
-            client.training_intensity = int(max(1, E_next[i]))
-            print(
-                f"[Round {self.round_id}] Client {client.id} -> next p={client.cur_pruning_rate:.4f}, E={client.training_intensity}")
+
+            # 连续策略下再做边界裁剪；离散策略不需要 clip(0,1)
+            if not use_bins:
+                final_p = float(np.clip(final_p, float(self.agent.cfg.p_low), float(self.agent.cfg.p_high)))
+
+            # E 做硬边界（PPO2 的 softmax 分配可能给到 0 或过大）
+            Ei = int(np.clip(int(E_next[i]), E_min, E_max))
+
+            client.cur_pruning_rate = final_p
+            client.training_intensity = Ei
+
+            print(f"[Round {self.round_id}] Client {client.id} -> next p={client.cur_pruning_rate:.4f}, E={client.training_intensity}")
 
         # ===== F) 统计刷新 & 条件更新 PPO =====
         self.prev_acc = acc_now
