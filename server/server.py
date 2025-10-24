@@ -257,6 +257,16 @@ class Server(object):
         ratio_mm = (T_epoch.max() / max(T_epoch.min(), 1e-6)) if len(T_epoch) else 1.0
         MD = 1.5  # acceptable上限，可调
         R1 = float(MD - ratio_mm)
+        # 在计算 R1 后追加
+        T = np.array(times, dtype=np.float32)
+        T_rank = (T.argsort().argsort() / max(len(T)-1, 1)) if len(T) > 1 else np.zeros_like(T)
+
+        p_arr  = np.array(p_exec, dtype=np.float32)  # 或者用刚刚选出的 p_ppo 做 delayed 奖励
+        p_rank = (p_arr.argsort().argsort() / max(len(p_arr)-1, 1)) if len(p_arr) > 1 else np.zeros_like(p_arr)
+
+        rho = 1.0 - 2.0 * np.mean(np.abs(T_rank - p_rank))  # ∈[-1,1]，越大越一致
+        R1 += 0.2 * float(rho)                              # 小权重塑形
+
 
         # R2：总训练时长的极差（min - max，最大化约等于最小化拖尾差）
         if len(times) > 0:

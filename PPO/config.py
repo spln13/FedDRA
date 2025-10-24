@@ -8,7 +8,7 @@ class PPOCommonCfg:
     gae_lambda: float = 0.95
     clip_coef: float = 0.2
     lr: float = 3e-4
-    ent_coef: float = 1e-3
+    ent_coef: float = 1e-2
     vf_coef: float = 0.5
     max_grad_norm: float = 1.0
     update_epochs: int = 4
@@ -24,7 +24,7 @@ class Stage1Cfg:
     p_min: float = 0.2
     p_max: float = 0.8
     s1_dim: int = 6
-    tau_e: float = 1.2  # 离散温度
+    tau_e: float = 1.4  # 离散温度
 
 
 @dataclass
