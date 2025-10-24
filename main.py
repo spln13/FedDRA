@@ -87,11 +87,12 @@ def fedDRA(args):
     E_min = 1  # 最小训练轮次
     E_max = 5  # 最大训练轮次
     hidden = 256  # PPO网络隐藏层维度
+    prune_bins = (0., 0.1, 0.2, 0.3, 0.4)
     clients = []
     for i in range(client_nums):
         client = Client(i, device, model_name, 1, dataset, 16)
         clients.append(client)
-    server = Server(device, clients, model_name, dataset, d_glob, d_cli, p_low, p_high, E_min, E_max, hidden)
+    server = Server(device, clients, dataset, model_name, prune_bins, E_min, E_max, batch_norm=True, warmup_rounds=20)
     print("fedDRA Start Training...")
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
