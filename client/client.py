@@ -51,8 +51,9 @@ class Client(object):
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
 
-
+        # total_times是用来for PPO决策，client_do_times是用来统计wait_time
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
+        total_time = self.mock_time_delay(total_time)
         self.client_do_times.append(total_time + prune_time)
         self.client_total_do_time += total_time + prune_time
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "

@@ -223,7 +223,7 @@ class Server(object):
             return {}
 
         total_client_wait_time = self.cal_wait_time(do_times)
-        print(f"[Round {self.round_id}] Total client wait time: {total_client_wait_time:.2f}s")
+        self.client_wait_times.append(total_client_wait_time)
 
         # ===== B) 构造两阶段状态 =====
         # 全局精度 & 差分
@@ -496,7 +496,6 @@ class Server(object):
 
     def fedbn_do(self):
         # fedbn方法，聚合除bn层以外参数
-
         start_time = time.time()
         client_do_time = []
         for client in self.clients:
