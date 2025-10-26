@@ -16,6 +16,7 @@ def fedAvg(args):
     fl_rounds = 200
     clients = []
     epochs = args.epochs
+    max_acc = 0.
     for i in range(client_nums):
         client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=False)
         clients.append(client)
@@ -29,12 +30,14 @@ def fedAvg(args):
             acc = c.test()
             accs.append(acc)
         print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
+        max_acc = max(max_acc, sum(accs) / len(accs))
     final_acc = []
     for c in clients:
         acc = c.test()
         final_acc.append(acc)
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
+    print("#######Max Acc: {:.2f}%".format(final_acc))
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
 
@@ -48,6 +51,7 @@ def fedBN(args):
     fl_rounds = 200
     clients = []
     epochs = args.epochs
+    max_acc = 0.
     for i in range(client_nums):
         client = Client(i, device, model_name, epochs, dataset, 16, batch_norm=True)
         clients.append(client)
@@ -61,12 +65,14 @@ def fedBN(args):
             acc = c.test()
             accs.append(acc)
         print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
+        max_acc = max(max_acc, sum(accs) / len(accs))
     final_acc = []
     for c in clients:
         acc = c.test()
         final_acc.append(acc)
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
+    print("#######Max Acc: {:.2f}%".format(final_acc))
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
 
@@ -89,6 +95,7 @@ def fedDRA(args):
     hidden = 256  # PPO网络隐藏层维度
     prune_bins = (0.1, 0.2, 0.3, 0.4)
     clients = []
+    max_acc = 0.
     for i in range(client_nums):
         client = Client(i, device, model_name, 1, dataset, 16)
         clients.append(client)
@@ -97,6 +104,12 @@ def fedDRA(args):
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
         server.feddra_do()  # 每一轮的逻辑包在server内实现
+        accs = []
+        for c in clients:
+            acc = c.test()
+            accs.append(acc)
+        print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
+        max_acc = max(max_acc, sum(accs) / len(accs))
     final_acc = []
     for c in clients:
         acc = c.test()
@@ -104,6 +117,7 @@ def fedDRA(args):
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
+    print("#######Max Acc: {:.2f}%".format(final_acc))
     cal_run_time(server)
     print_reward(server.rewards)
 

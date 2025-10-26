@@ -478,6 +478,6 @@ class Client(object):
             total_time *= 2.
         elif self.id % 4 == 2:  # 2 6
             total_time *= 3.
-        elif self.id % 4 == 3:  # 3 7
+        if self.id % 4 == 3:  # 3 7
             total_time *= 5.
         return total_time

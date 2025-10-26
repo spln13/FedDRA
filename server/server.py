@@ -261,7 +261,7 @@ class Server(object):
         T = np.array(times, dtype=np.float32)
         T_rank = (T.argsort().argsort() / max(len(T)-1, 1)) if len(T) > 1 else np.zeros_like(T)
 
-        p_arr  = np.array(p_exec, dtype=np.float32)  # 或者用刚刚选出的 p_ppo 做 delayed 奖励
+        p_arr = np.array(p_exec, dtype=np.float32)  # 或者用刚刚选出的 p_ppo 做 delayed 奖励
         p_rank = (p_arr.argsort().argsort() / max(len(p_arr)-1, 1)) if len(p_arr) > 1 else np.zeros_like(p_arr)
 
         rho = 1.0 - 2.0 * np.mean(np.abs(T_rank - p_rank))  # ∈[-1,1]，越大越一致
