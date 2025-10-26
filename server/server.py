@@ -28,29 +28,35 @@ class Server(object):
 
         # ==== Two-Stage PPO 初始化 ====
         self.ppo_config = TwoStageConfig(device=self.device)
-        # 对齐我们在 generate_next_round_params 里构造的状态维度
-        self.ppo_config.s1.s1_dim = 6  # [t_norm, acc_i, |D_i|_norm, H_i, p_prev_i, E_prev_i_norm]
-        self.ppo_config.s2.s2_dim = 6  # [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
-        # 剪枝动作：使用离散档，基于传入的 p_low/p_high 给一个5档示例（可按需自定义）
-        self.ppo_config.s1.use_discrete_bins = True
-        # self.ppo_config.s1.prune_bins = (p_low, max(p_low, 0.35), 0.5, min(0.65, p_high), p_high)
-        self.ppo_config.s1.prune_bins = prune_bins
+        # 对齐两阶段 PPO 的输入维度（逐客户端 + 全局）
+        self.ppo_config.s1.d_client = 6   # [Tn, acc_i, Dn, H_i, p_prev_i, En]
+        self.ppo_config.s1.d_global = 6   # [Tmin, Tmean, Tmax, Tstd, acc_now, N]
+        self.ppo_config.s2.d_client = 6   # [Tn, H_i, Dn, acc_i, p_i, En]
+        self.ppo_config.s2.d_global = 6
 
-        # 轮数总预算（softmax后分配给各客户端），以客户端数量和上限估一个起点
+        # 剪枝动作离散档
+        self.ppo_config.s1.num_bins = len(prune_bins)
+        self.ppo_config.s1.p_low = float(min(prune_bins))
+        self.ppo_config.s1.p_high = float(max(prune_bins))
+
+        # 轮数范围与总预算（softmax 后平均分配的期望）
+        self.ppo_config.s2.E_min = E_min
+        self.ppo_config.s2.E_max = E_max
         self.ppo_config.s2.tau_total = max(1, len(self.clients) * max(1, E_max) // 2)
+
         # 公共超参（可按需微调）
         self.ppo_config.common.lr = 3e-4
         self.ppo_config.common.clip_coef = 0.2
         self.ppo_config.common.gae_lambda = 0.95
-        self.ppo_config.common.target_kl = 0.02
 
         # 创建两阶段 PPO 管理器
         self.agent = TwoStagePPO(self.ppo_config)
-        # 兼容规则策略/其它函数对区间与边界的读取
-        self.agent.cfg.p_low = min(self.ppo_config.s1.prune_bins)
-        self.agent.cfg.p_high = max(self.ppo_config.s1.prune_bins)
-        self.agent.cfg.E_min = E_min
-        self.agent.cfg.E_max = E_max
+
+        # 兼容旧的规则策略读取路径
+        self.agent.cfg.p_low = self.ppo_config.s1.p_low
+        self.agent.cfg.p_high = self.ppo_config.s1.p_high
+        self.agent.cfg.E_min = self.ppo_config.s2.E_min
+        self.agent.cfg.E_max = self.ppo_config.s2.E_max
 
         self.ppo_update_every = 3
 
@@ -231,91 +237,123 @@ class Server(object):
         prev_acc = float(getattr(self, "prev_acc", 0.0))
         dAcc = acc_now - prev_acc
 
-        # per-epoch 时间（上一轮实际执行结果）
-        T_epoch = [t / max(e, 1) for t, e in zip(times, E_exec)]
-        T_epoch = np.array(T_epoch, dtype=np.float32)
+        # 单位 epoch 时间（上一轮实际执行结果）
+        T_epoch = np.array([t / max(e, 1) for t, e in zip(times, E_exec)], dtype=np.float32)
         Tmin = float(T_epoch.min()) if len(T_epoch) else 1.0
-        t_norm = (T_epoch / max(Tmin, 1e-6)).tolist()  # 归一化后的端侧时延（HAPFL核心信号）
+        Tmean = float(T_epoch.mean()) if len(T_epoch) else 0.0
+        Tmax = float(T_epoch.max()) if len(T_epoch) else 0.0
+        Tstd = float(T_epoch.std()) if len(T_epoch) else 0.0
 
-        # s1[i] = [t_norm_i, acc_i, |D_i|_norm, H_i, p_prev_i, E_prev_i_norm]
-        D_max = float(max(sizes)) if sizes else 1.0
-        E_max = float(self.agent.cfg.s2.tau_total if hasattr(self.agent.cfg, 's2') else max(E_exec + [1]))
+        # 逐客户端归一化特征
+        D = np.array(sizes, dtype=np.float32)
+        Dn = (D - (D.min() if len(D) else 0.0)) / (max(D.max() - (D.min() if len(D) else 0.0), 1e-6))
+        En = np.array(E_exec, dtype=np.float32) / max(self.agent.cfg.E_max, 1)
+
+        Tn = (T_epoch / max(Tmin, 1e-6)) if len(T_epoch) else np.zeros(N, dtype=np.float32)
+
+        # —— Stage-1 输入（逐客户端）: [Tn, acc_i, Dn, H_i, p_prev, En]
         s1_rows = []
         for i in range(N):
             s1_rows.append([
-                float(t_norm[i]),
+                float(Tn[i]),
                 float(accs[i]),
-                float(sizes[i] / max(D_max, 1e-6)),
+                float(Dn[i]),
                 float(entropies[i]),
                 float(prev_p[i]),
-                float(E_exec[i] / max(E_max, 1.0)),
+                float(En[i]),
             ])
-        s1 = torch.tensor(s1_rows, dtype=torch.float32, device=self.device)  # [N, d_s1]
+        S1_cli = torch.tensor(s1_rows, dtype=torch.float32, device=self.device)  # [N, 6]
+
+        # 全局上下文 g
+        g = torch.tensor([Tmin, Tmean, Tmax, Tstd, acc_now, float(N)],
+                         dtype=torch.float32, device=self.device)               # [6]
 
         # ===== C) 两阶段奖励（基于上一轮结果） =====
-        # R1：拉平单位epoch时长（max/min 越小越好）
-        ratio_mm = (T_epoch.max() / max(T_epoch.min(), 1e-6)) if len(T_epoch) else 1.0
-        MD = 1.5  # acceptable上限，可调
-        R1 = float(MD - ratio_mm)
-        # 在计算 R1 后追加
-        T = np.array(times, dtype=np.float32)
-        T_rank = (T.argsort().argsort() / max(len(T)-1, 1)) if len(T) > 1 else np.zeros_like(T)
+        # —— Stage-1：逐客户端奖励向量（慢→剪多、难/数据多→剪少；附秩一致项）
+        # 时间项
+        r_time = - (torch.tensor(Tn, device=self.device) - 1.0) ** 2                        # [N]
+        # 秩一致：rank(Tn) ≈ rank(p_exec)
+        def _rank01(x_np):
+            if len(x_np) <= 1: return np.zeros_like(x_np, dtype=np.float32)
+            return (x_np.argsort().argsort().astype(np.float32) / max(len(x_np) - 1, 1))
+        rank_t = torch.tensor(_rank01(Tn), device=self.device)
+        rank_p = torch.tensor(_rank01(np.array(p_exec, dtype=np.float32)), device=self.device)
+        r_align = 1.0 - torch.abs(rank_t - rank_p)                                            # [N], ∈[0,1]
+        # 轻度精度项
+        acc_t = torch.tensor(accs, dtype=torch.float32, device=self.device)
+        if not hasattr(self, "ema_acc"): self.ema_acc = float(acc_now)
+        ema = torch.tensor(self.ema_acc, device=self.device)
+        r_acc = (acc_t - ema) / (acc_t.std() + 1e-6)
 
-        p_arr  = np.array(p_exec, dtype=np.float32)  # 或者用刚刚选出的 p_ppo 做 delayed 奖励
-        p_rank = (p_arr.argsort().argsort() / max(len(p_arr)-1, 1)) if len(p_arr) > 1 else np.zeros_like(p_arr)
+        w_time, w_align, w_acc = 1.0, 0.2, 0.1
+        R1_vec = (w_time * r_time + w_align * r_align + w_acc * r_acc).unsqueeze(-1)          # [N,1]
 
-        rho = 1.0 - 2.0 * np.mean(np.abs(T_rank - p_rank))  # ∈[-1,1]，越大越一致
-        R1 += 0.2 * float(rho)                              # 小权重塑形
+        # —— Stage-2：全局奖励（越小越好）= - (Tmax - Tmin)
+        R2 = float(Tmin - Tmax)
 
+        print(f"[Server] Round {self.round_id} R1(mean)={R1_vec.mean().item():.4f}, R2={R2:.4f}")
 
-        # R2：总训练时长的极差（min - max，最大化约等于最小化拖尾差）
-        if len(times) > 0:
-            R2 = float(min(times) - max(times))
-        else:
-            R2 = 0.0
+        # ===== D) 写入 buffer（严格 on-policy：使用上一轮缓存的 Stage-1 决策） =====
+        if hasattr(self, "_last_stage1"):
+            last = self._last_stage1
+            self.agent.store_transition_stage1(
+                s=(last["S1"], last["g"]),
+                a=last["a"],
+                logp=last["logp"],
+                v=last["v"],
+                r=R1_vec.detach(),
+                s_next=(S1_cli.detach(), g.detach()),
+                done=torch.zeros(N, 1, device=self.device)
+            )
+            del self._last_stage1
 
-        # ===== D) 先写入 buffer（使用当前状态作为 s 与 s_next 的简化做法） =====
-        # 注意：严格 on-policy 需缓存“下发时的 (s,a,logp)”，这里用近似（工程上可行）
-        s1_mean = s1.mean(dim=0, keepdim=True)  # [1, d_s1]：用均值作全局近似
-        self.agent.store_transition_stage1(s=s1_mean, a=torch.zeros(N, dtype=torch.long, device=self.device),
-                                           logp=torch.zeros(N, device=self.device),
-                                           v=torch.zeros(1, 1, device=self.device),
-                                           r=R1, s_next=s1_mean, done=0)
-
-        # s2_global: [min(Tm), mean(Tm), max(Tm), std(Tm), acc_now, N]
-        # 先用上轮“观察到”的剪枝率估计一个 Tm 占位（为了写 buffer 与下一步选择保持同形）
-        p_obs = torch.tensor(p_exec, dtype=torch.float32, device=self.device).clamp(0.0, 1.0)
-        G = (1.0 + (1.0 - p_obs)).cpu().numpy()  # 线性近似：剪得少→更慢
-        Tm = (T_epoch * G).astype(np.float32)
-        if len(Tm) > 0:
-            s2_feat = torch.tensor([[float(Tm.min()), float(Tm.mean()), float(Tm.max()), float(Tm.std() + 1e-8),
-                                     float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
-        else:
-            s2_feat = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
-        # 存 stage2 的 (s, a≈argmax, logp≈logmaxprob, r, s_next)
-        self.agent.store_transition_stage2(s=s2_feat, a_logits=torch.zeros(1, max(N, 1), device=self.device),
-                                           v=torch.zeros(1, 1, device=self.device), r=R2, s_next=s2_feat, done=0)
+        # Stage-2（critic-only）：使用全局上下文 g
+        self.agent.store_transition_stage2(
+            s=g.view(1, -1),
+            logits=torch.zeros(1, N, device=self.device),
+            v=torch.zeros(1, 1, device=self.device),
+            r=torch.tensor([[R2]], dtype=torch.float32, device=self.device),
+            s_next=g.view(1, -1),
+            done=torch.zeros(1, 1, device=self.device)
+        )
 
         # ===== E) 用策略为“下一轮”生成动作 =====
         with torch.no_grad():
             # PPO1：逐客户端剪枝率
-            out1 = self.agent.select_pruning(s1)  # {'p': [N,1], 'a', 'logp', 'v'}
-            p_ppo = out1['p'].squeeze(-1).tolist()
+            out1 = self.agent.select_pruning(S1_cli, g, deterministic=False)
+            p_ppo = out1["p"].squeeze(-1).tolist()
 
-            # 基于 p_ppo 估计下一轮剪枝后的单位epoch时间 Tm_pred
-            p_vec = out1['p'].squeeze(-1).clamp(0.0, 1.0).cpu().numpy()
-            G_next = (1.0 + (1.0 - p_vec))
-            Tm_pred = (T_epoch * G_next).astype(np.float32)
-            if len(Tm_pred) > 0:
-                s2_next = torch.tensor(
-                    [[float(Tm_pred.min()), float(Tm_pred.mean()), float(Tm_pred.max()), float(Tm_pred.std() + 1e-8),
-                      float(acc_now), float(N)]], dtype=torch.float32, device=self.device)
-            else:
-                s2_next = torch.zeros(1, getattr(self.agent.cfg.s2, 's2_dim', 6), device=self.device)
+            # 缓存“本轮下发的 Stage-1 决策”，下一轮用来写 buffer
+            self._last_stage1 = dict(
+                S1=S1_cli.detach().clone(),
+                g=g.detach().clone(),
+                a=out1["a"].detach().clone(),
+                logp=out1["logp"].detach().clone(),
+                v=out1["v"].detach().clone(),
+            )
 
-            # PPO2：softmax 分配本地轮数（总预算 tau_total）
-            out2 = self.agent.select_epochs(s2_next, k=N)  # {'E':[N], 'probs', 'v', 'logits'}
-            E_ppo = [int(x) for x in out2['E'].tolist()]
+            # 构造 Stage-2 逐客户端特征: [Tn, H_i, Dn, acc_i, p_i(next), En]
+            S2_rows = []
+            p_next_vec = out1["p"].squeeze(-1).clamp(0.0, 1.0).cpu().numpy()
+            for i in range(N):
+                S2_rows.append([
+                    float(Tn[i]),
+                    float(entropies[i]),
+                    float(Dn[i]),
+                    float(accs[i]),
+                    float(p_next_vec[i]),
+                    float(En[i]),
+                ])
+            S2_cli = torch.tensor(S2_rows, dtype=torch.float32, device=self.device)  # [N,6]
+
+            out2 = self.agent.select_epochs(
+                S2_cli, g,
+                tau_total=int(self.agent.cfg.s2.tau_total),
+                E_min=int(self.agent.cfg.E_min),
+                E_max=int(self.agent.cfg.E_max),
+                deterministic=False
+            )
+            E_ppo = [int(x) for x in out2["E"].tolist()]
 
         # 规则策略（便于 warmup 与混合）
         p_rule, E_rule = self._rule_policy(times, entropies)
@@ -509,6 +547,7 @@ class Server(object):
 
     def fedbn_aggregate(self):
         pass
+
 
     def cal_wait_time(self, total_time):
         # 根据client使用的total_time计算客户端等待的时间

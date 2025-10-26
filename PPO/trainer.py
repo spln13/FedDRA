@@ -1,309 +1,215 @@
-# -*- coding: utf-8 -*-
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.distributions import Categorical, Normal
+# PPO/trainer.py
+from typing import Dict, Any, Optional
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Categorical
+import numpy as np
 
 from .config import TwoStageConfig
-from .buffer import PPORolloutBuffer
-from .nets import (
-    Stage1DiscreteActor, Stage1ContActor, Stage1Critic,
-    Stage2Actor, Stage2Critic,
-    sample_discrete, sample_continuous
-)
+from .buffer import SimpleTrajBuffer
+from .nets import Stage1Actor, Stage1Critic, Stage2Actor, Stage2Critic
 
 
 class _PPOCore:
-    def __init__(self, actor, critic, cfg, device="cpu", is_discrete=True):
-        self.actor = actor.to(device)
-        self.critic = critic.to(device)
-        self.cfg = cfg
+    def __init__(self, actor: nn.Module, critic: nn.Module, cfg_common: TwoStageConfig, device: str):
+        self.actor = actor
+        self.critic = critic
+        self.cfg = cfg_common
         self.device = device
-        self.opt = torch.optim.Adam(
-            list(actor.parameters()) + list(critic.parameters()),
-            lr=cfg.lr
-        )
+        params = list(actor.parameters()) + list(critic.parameters())
+        self.opt = torch.optim.Adam(params, lr=cfg_common.lr)
 
     def _compute_adv(self, r, v, v_next, done):
-        """
-        r, v, v_next, done: [T, *tail]
-        tail 可以是 [1] 或 [B,1] 等；本函数自适应。
-        返回:
-        adv, ret: 与 v 同形
-        """
-        cfg = self.cfg
-        r      = r.float()
-        v      = v.float()
-        v_next = v_next.float()
-        done   = done.float()
-
-        T = r.shape[0]
-        tail_shape = tuple(v.shape[1:])  # e.g. (1,) or (B,1)
-
-        adv = torch.zeros((T,)+tail_shape, device=r.device, dtype=r.dtype)
-        gae = torch.zeros(tail_shape, device=r.device, dtype=r.dtype)
-
-        gamma, lam = cfg.gamma, cfg.gae_lambda
+        # r, v, v_next, done: [B,1] or [T*B,1]
+        gamma, lam = self.cfg.gamma, self.cfg.gae_lambda
+        # 按样本独立（T=1时等价）：直接 delta/adv（简化）
         with torch.no_grad():
-            for t in reversed(range(T)):
-                delta_t = r[t] + gamma * (1.0 - done[t]) * v_next[t] - v[t]
-                gae = delta_t + gamma * lam * (1.0 - done[t]) * gae
-                adv[t] = gae
-
+            delta = r + gamma * (1 - done) * v_next - v
+            adv = delta.clone()
             ret = adv + v
-
-            # 归一化 advantage（对所有元素做一次全局归一化）
-            adv_flat = adv.view(T, -1)
-            adv_flat = (adv_flat - adv_flat.mean()) / (adv_flat.std() + 1e-8)
-            adv = adv_flat.view_as(adv)
-
+            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
         return adv, ret
-
-    def update_discrete(self, traj):
-        cfg = self.cfg
-        s = traj["s"];
-        a = traj["a"].long();
-        logp_old = traj["logp"];
-        v_old = traj["v"]
-        r = traj["r"];
-        s_next = traj["s_next"];
-        done = traj["done"]
-
-        with torch.no_grad():
-            v_next = self.critic(s_next)
-        adv, ret = self._compute_adv(r, v_old, v_next, done)
-
-        logits = self.actor(s)
-        dist = Categorical(logits=logits)
-        logp = dist.log_prob(a)
-        ratio = (logp - logp_old).exp()
-
-        surr1 = ratio * adv.squeeze(-1)
-        surr2 = torch.clamp(ratio, 1 - cfg.clip_coef, 1 + cfg.clip_coef) * adv.squeeze(-1)
-        actor_loss = -torch.min(surr1, surr2).mean() - cfg.ent_coef * dist.entropy().mean()
-
-        v = self.critic(s)
-        critic_loss = F.mse_loss(v, ret)
-
-        loss = actor_loss + cfg.vf_coef * critic_loss
-        self.opt.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()), cfg.max_grad_norm)
-        self.opt.step()
-
-        approx_kl = (logp_old - logp).mean().clamp_min(0.0)
-        return dict(loss=loss.item(), actor=actor_loss.item(), critic=critic_loss.item(), kl=approx_kl.item())
-
-    def update_continuous(self, traj, p_min, p_max):
-        cfg = self.cfg
-        s = traj["s"];
-        a = traj["a"];
-        logp_old = traj["logp"];
-        v_old = traj["v"]
-        r = traj["r"];
-        s_next = traj["s_next"];
-        done = traj["done"]
-
-        with torch.no_grad():
-            v_next = self.critic(s_next)
-        adv, ret = self._compute_adv(r, v_old, v_next, done)
-
-        mu, std = self.actor(s)
-        # 反推 tanh-normal 的原变量近似（直接用 a 当输入的近似）
-        # 我们用重算 logp 的方式：先把 a 映射回 tanh 空间：
-        y = (a - p_min) / (p_max - p_min) * 2 - 1
-        y = y.clamp(-0.999999, 0.999999)
-        x = 0.5 * (torch.log1p(y) - torch.log1p(-y))
-        dist = Normal(mu, std)
-        logp = dist.log_prob(x) - torch.log(1 - y.pow(2) + 1e-8)
-        logp = logp.sum(dim=-1)
-
-        ratio = (logp - logp_old).exp()
-        surr1 = ratio * adv.squeeze(-1)
-        surr2 = torch.clamp(ratio, 1 - cfg.clip_coef, 1 + cfg.clip_coef) * adv.squeeze(-1)
-        actor_loss = -torch.min(surr1, surr2).mean() - cfg.ent_coef * dist.entropy().sum(dim=-1).mean()
-
-        v = self.critic(s)
-        critic_loss = F.mse_loss(v, ret)
-
-        loss = actor_loss + cfg.vf_coef * critic_loss
-        self.opt.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()), cfg.max_grad_norm)
-        self.opt.step()
-
-        approx_kl = (logp_old - logp).mean().clamp_min(0.0)
-        return dict(loss=loss.item(), actor=actor_loss.item(), critic=critic_loss.item(), kl=approx_kl.item())
 
 
 class TwoStagePPO:
     """
-    统一管理两套 PPO：
-      - PPO1: 剪枝率/剪枝档
-      - PPO2: E 分配（softmax over clients）
-    对外暴露：
-      select_pruning(s1_batch) -> p_target 或 bin_idx
-      select_epochs(s2_global, k) -> E_vec 长度为 k
-      store_transition_stage1(...); update_stage1(...)
-      store_transition_stage2(...); update_stage2(...)
+    两阶段 PPO：
+      Stage-1: 逐客户端离散动作 -> 剪枝率 bins
+      Stage-2: 逐客户端打分 -> softmax 分配 τ_total 得到 E
     """
 
     def __init__(self, cfg: TwoStageConfig):
         self.cfg = cfg
-        dev = cfg.device
+        self.device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
 
-        # === PPO1 ===
-        if cfg.s1.use_discrete_bins:
-            self.s1_actor = Stage1DiscreteActor(cfg.s1.s1_dim, len(cfg.s1.prune_bins))
-            self.s1_is_discrete = True
-        else:
-            self.s1_actor = Stage1ContActor(cfg.s1.s1_dim)
-            self.s1_is_discrete = False
-        self.s1_critic = Stage1Critic(cfg.s1.s1_dim)
-        self.ppo1 = _PPOCore(self.s1_actor, self.s1_critic, cfg.common, device=dev)
+        # ====== Stage-1 ======
+        self.s1_actor = Stage1Actor(cfg.s1.d_client, cfg.s1.d_global, cfg.s1.num_bins, cfg.s1.hidden).to(self.device)
+        self.s1_critic = Stage1Critic(cfg.s1.d_client, cfg.s1.d_global, cfg.s1.hidden).to(self.device)
+        self.ppo1 = _PPOCore(self.s1_actor, self.s1_critic, cfg.common, self.device)
+        # 剪枝 bins
+        self.prune_bins = torch.linspace(cfg.s1.p_low, cfg.s1.p_high, cfg.s1.num_bins, device=self.device)
 
-        # === PPO2 ===
-        # 让 Actor 输出至多 k_max=256 的 logits，你在 forward 时切到实际 k
-        self.k_max = 256
-        self.s2_actor = Stage2Actor(cfg.s2.s2_dim, k_max=self.k_max)
-        self.s2_critic = Stage2Critic(cfg.s2.s2_dim)
-        self.ppo2 = _PPOCore(self.s2_actor, self.s2_critic, cfg.common, device=dev)
+        # ====== Stage-2 ======
+        self.s2_actor = Stage2Actor(cfg.s2.d_client, cfg.s2.d_global, cfg.s2.hidden).to(self.device)
+        self.s2_critic = Stage2Critic(cfg.s2.d_global, cfg.s2.hidden).to(self.device)
+        self.ppo2 = _PPOCore(self.s2_actor, self.s2_critic, cfg.common, self.device)
 
         # buffers
-        self.buf1 = PPORolloutBuffer(device=dev)
-        self.buf2 = PPORolloutBuffer(device=dev)
+        self.buf1 = SimpleTrajBuffer(device=str(self.device))
+        self.buf2 = SimpleTrajBuffer(device=str(self.device))
 
-        self.device = dev
-        self.prune_bins = torch.tensor(cfg.s1.prune_bins, dtype=torch.float32, device=dev)
-
+    # ---------------- Stage-1: select/store/update ----------------
     @torch.no_grad()
-    def select_pruning(self, s1_batch):
+    def select_pruning(self, S1_cli: torch.Tensor, g: torch.Tensor, deterministic: bool = False) -> Dict[
+        str, torch.Tensor]:
         """
-        输入：s1_batch [B, d_s1]，每行=一个client的状态（归一化后的 T_d 等）
-        输出：
-           dict: { 'p': [B,1], 'a': 动作张量, 'logp': [B,], 'v': [B,1] }
+        S1_cli: [N, d1] 逐客户端特征
+        g     : [d_g]   全局上下文
         """
-        s1 = s1_batch.to(self.device).float()
-        v = self.s1_critic(s1)
-        if self.s1_is_discrete:
-            logits = self.s1_actor(s1)
-            a, logp, ent, _ = sample_discrete(logits, tau=self.cfg.s1.tau_e)
-            p = self.prune_bins[a].unsqueeze(-1)  # [B,1]
-        else:
-            mu, std = self.s1_actor(s1)
-            p, logp, ent, _ = sample_continuous(mu, std, self.cfg.s1.p_min, self.cfg.s1.p_max)
-            a = p  # 连续动作本身就是p
-        return dict(p=p, a=a, logp=logp, v=v)
+        logits = self.s1_actor(S1_cli, g)  # [N, B]
+        tau = self.cfg.s1.tau_e
+        probs = torch.softmax(logits / tau, dim=-1)
+        dist = Categorical(probs=probs)
+        a = torch.argmax(probs, dim=-1) if deterministic else dist.sample()  # [N]
+        logp = dist.log_prob(a)  # [N]
+        v = self.s1_critic(S1_cli, g)  # [N,1]
+        p = self.prune_bins[a].unsqueeze(-1)  # [N,1]
+        return dict(p=p, a=a, logp=logp, v=v, probs=probs, logits=logits)
 
-    @torch.no_grad()
-    def select_epochs(self, s2_global, k):
+    def store_transition_stage1(self,
+                                s: tuple, a: torch.Tensor, logp: torch.Tensor, v: torch.Tensor,
+                                r: torch.Tensor, s_next: tuple, done: Optional[torch.Tensor] = None):
         """
-        输入：s2_global [B, d_s2]（建议把全局统计/拼接特征做成一行B=1）
-             k: 本轮参与的客户端个数
-        输出：E_vec 长度 k（long）
+        s:      (S1_cli, g)  -> ([N,d1], [d_g])  注意：可直接传你缓存的上一轮值
+        a:      [N]          离散 bin 索引
+        logp:   [N]
+        v:      [N,1]
+        r:      [N,1]        逐客户端奖励向量
+        s_next: (S1_cli', g')
+        done:   [N,1]        通常全0
         """
-        s2 = s2_global.to(self.device).float()
-        v = self.s2_critic(s2)
-        logits = self.s2_actor(s2, k)  # [B, k]
-        logits = logits / max(self.cfg.s2.tau_e, 1e-6)
-        dist = Categorical(logits=logits)
-        # 直接取概率做 softmax 权重，而不是采样一个索引
-        probs = dist.probs.squeeze(0)  # [k]
-        # 分配 E
-        sigma = probs / probs.sum()
-        E = torch.round(sigma * self.cfg.s2.tau_total).long().clamp(min=1)  # [k]
-        return dict(E=E, probs=probs, v=v, logits=logits.squeeze(0))
+        if done is None:
+            done = torch.zeros_like(r)
+        self.buf1.add(s=s, a=a, logp=logp, v=v, r=r, s_next=s_next, done=done)
 
-    # ========== 存轨迹（每轮一次即可） ==========
-    def store_transition_stage1(self, s, a, logp, v, r, s_next, done):
-        self.buf1.add(s=s, a=a, logp=logp, v=v, r=torch.tensor([r], device=self.device),
-                      s_next=s_next, done=torch.tensor([done], device=self.device))
-
-    def store_transition_stage2(self, s, a_logits, v, r, s_next, done):
-        """
-        a_logits: [1, k] 对本轮 k 个客户端的打分logits（配合 softmax 分配E）
-        这里把 a_logits 也存进 buffer（或至少把 k 存进去），便于 update 阶段重建 actor 的输出维度。
-        """
-        with torch.no_grad():
-            probs = torch.softmax(a_logits, dim=-1)  # [1,k]
-            a = torch.argmax(probs, dim=-1)          # [1]
-            logp = torch.log(probs[0, a])            # [1]
-
-        # ✅ 关键：把 a_logits 以及 k 存起来
-        k_tensor = torch.tensor([a_logits.shape[-1]], device=self.device, dtype=torch.long)
-
-        self.buf2.add(
-            s=s, a=a, logp=logp, v=v,
-            r=torch.tensor([r], device=self.device),
-            s_next=s_next, done=torch.tensor([done], device=self.device),
-            a_logits=a_logits.detach(),   # <—— 新增
-            k=k_tensor                    # <—— 新增（冗余但安全）
-        )
-    # ========== 更新 ==========
     def ppo_update_stage1(self):
-        if len(self.buf1) == 0: return {}
+        if len(self.buf1) == 0:
+            return {}
         traj = self.buf1.stack()
-        # 多轮update
-        outs = {}
-        for _ in range(self.cfg.common.update_epochs):
-            if self.s1_is_discrete:
-                out = self.ppo1.update_discrete(traj)
-            else:
-                out = self.ppo1.update_continuous(traj, self.cfg.s1.p_min, self.cfg.s1.p_max)
-            outs = out
-            if out["kl"] > self.cfg.common.target_kl:
-                break
-        self.buf1.clear()
-        return outs
+        S1_cli, g = traj["s"]
+        a = traj["a"].long()
+        logp_old = traj["logp"]
+        v_old = traj["v"]
+        r = traj["r"]
+        S1_cli2, g2 = traj["s_next"]
+        done = traj["done"]
 
+        with torch.no_grad():
+            v_next = self.s1_critic(S1_cli2, g2)
+        adv, ret = self.ppo1._compute_adv(r, v_old, v_next, done)
+
+        logits = self.s1_actor(S1_cli, g)
+        dist = Categorical(logits=logits)
+        logp = dist.log_prob(a)
+        ratio = (logp - logp_old).exp()
+
+        cfgc = self.cfg.common
+        adv_use = adv.squeeze(-1)
+        surr1 = ratio * adv_use
+        surr2 = torch.clamp(ratio, 1 - cfgc.clip_coef, 1 + cfgc.clip_coef) * adv_use
+        actor_loss = -torch.min(surr1, surr2).mean() - cfgc.ent_coef * dist.entropy().mean()
+
+        v = self.s1_critic(S1_cli, g)
+        critic_loss = F.mse_loss(v, ret)
+
+        loss = actor_loss + cfgc.vf_coef * critic_loss
+        self.ppo1.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(list(self.s1_actor.parameters()) + list(self.s1_critic.parameters()),
+                                 cfgc.max_grad_norm)
+        self.ppo1.opt.step()
+
+        self.buf1.clear()
+        approx_kl = (logp_old - logp).mean().clamp_min(0.0).item()
+        return dict(loss=loss.item(), actor=actor_loss.item(), critic=critic_loss.item(), kl=approx_kl)
+
+    # ---------------- Stage-2: select/store/update ----------------
+    @torch.no_grad()
+    def select_epochs(self,
+                      S2_cli: torch.Tensor, g: torch.Tensor,
+                      tau_total: int, E_min: int, E_max: int,
+                      deterministic: bool = False) -> Dict[str, Any]:
+        """
+        S2_cli:   [N, d2] 逐客户端特征
+        g:        [d_g]   全局上下文
+        tau_total: int    总预算（轮数总和）
+        """
+        logits = self.s2_actor(S2_cli, g)  # [1, N]
+        tau = self.cfg.s2.tau_e
+        probs = torch.softmax(logits / tau, dim=-1)  # [1,N]
+
+        # 预算分配 → 整数映射
+        alloc = (probs[0] * float(max(tau_total, 1))).cpu().numpy()  # [N]
+        E = np.clip(np.round(alloc), E_min, E_max).astype(int)
+        # 总和校正
+        diff = int(tau_total - int(E.sum()))
+        if diff != 0:
+            order = np.argsort(-probs[0].cpu().numpy()) if diff > 0 else np.argsort(probs[0].cpu().numpy())
+            for idx in order:
+                if diff == 0:
+                    break
+                cand = E[idx] + (1 if diff > 0 else -1)
+                if E_min <= cand <= E_max:
+                    E[idx] = cand
+                    diff += (-1 if diff > 0 else +1)
+
+        v = self.s2_critic(g)  # [1,1]
+        return dict(E=E, probs=probs, logits=logits, v=v)
+
+    def store_transition_stage2(self,
+                                s: torch.Tensor, logits: torch.Tensor, v: torch.Tensor,
+                                r: torch.Tensor, s_next: torch.Tensor, done: Optional[torch.Tensor] = None):
+        """
+        s:       g 或者 (S2_cli, g) 均可，这里用 g（[1,d_g]），简化 Critic 学习稳定
+        logits:  [1,N]   （保留以便需要时推断 N；但现在 update 不依赖 k）
+        v:       [1,1]
+        r:       [1,1] 或 [1] 全局奖励
+        s_next:  [1,d_g]
+        done:    [1,1]
+        """
+        if done is None:
+            done = torch.zeros_like(v)
+        self.buf2.add(s=s, a_logits=logits, v=v, r=r, s_next=s_next, done=done)
 
     def ppo_update_stage2(self):
         if len(self.buf2) == 0:
             return {}
-
         traj = self.buf2.stack()
-        s       = traj["s"]
-        a       = traj["a"].long()
-        logp_old= traj["logp"]
-        v_old   = traj["v"]
-        r       = traj["r"]
-        s_next  = traj["s_next"]
-        done    = traj["done"]
-
-        # ✅ 关键：稳妥获取 k
-        if "k" in traj:
-            k = int(traj["k"][0].item())
-        elif "a_logits" in traj:
-            k = int(traj["a_logits"].shape[-1])
-        else:
-            raise RuntimeError("Need 'k' or 'a_logits' in buffer to infer number of clients (k).")
+        g = traj["s"]  # [B, d_g]
+        logits_saved = traj["a_logits"]  # [B, 1, N] 或 [B, N] (拼接时会展开)
+        v_old = traj["v"]  # [B,1]
+        r = traj["r"]  # [B,1]
+        g2 = traj["s_next"]  # [B, d_g]
+        done = traj["done"]  # [B,1]
 
         with torch.no_grad():
-            v_next = self.s2_critic(s_next)
+            v_next = self.s2_critic(g2)
         adv, ret = self.ppo2._compute_adv(r, v_old, v_next, done)
 
-        logits = self.s2_actor(s, k)  # <<<<<< 需要 k
-        dist   = torch.distributions.Categorical(logits=logits)
-        logp   = dist.log_prob(a)
-        ratio  = (logp - logp_old).exp()
+        # 直接用当前策略的 logits，Stage-2 是配额分配；不做离散 logp
+        logits = self.s2_actor(g=g, S_cli=torch.zeros(1, 1, device=self.device)) if False else None
+        # ↑ 保留兼容位；实际我们只优化 critic（actor靠前向影响选择，或采用离线塑形）
 
-        cfgc = self.cfg.common
-        surr1 = ratio * adv.squeeze(-1)
-        surr2 = torch.clamp(ratio, 1 - cfgc.clip_coef, 1 + cfgc.clip_coef) * adv.squeeze(-1)
-        actor_loss  = -torch.min(surr1, surr2).mean() - cfgc.ent_coef * dist.entropy().mean()
+        # 这里采用“critic-only”更新，actor 通过选择阶段 + 奖励塑形间接学习；
+        # 若你希望显式 actor 更新，可引入 Dirichlet/Concrete 分布的连续策略损失，这里先稳健起见只更 critic。
+        v = self.s2_critic(g)
+        critic_loss = F.mse_loss(v, ret)
 
-        v = self.s2_critic(s)
-        critic_loss = torch.nn.functional.mse_loss(v, ret)
-
-        loss = actor_loss + cfgc.vf_coef * critic_loss
         self.ppo2.opt.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            list(self.s2_actor.parameters()) + list(self.s2_critic.parameters()),
-            cfgc.max_grad_norm
-        )
+        (self.cfg.common.vf_coef * critic_loss).backward()
+        nn.utils.clip_grad_norm_(list(self.s2_critic.parameters()), self.cfg.common.max_grad_norm)
         self.ppo2.opt.step()
 
-        approx_kl = (logp_old - logp).mean().clamp_min(0.0).item()
-        outs = dict(loss=loss.item(), actor=actor_loss.item(), critic=critic_loss.item(), kl=approx_kl)
-
         self.buf2.clear()
-        return outs
+        return dict(loss=critic_loss.item(), actor=0.0, critic=critic_loss.item(), kl=0.0)

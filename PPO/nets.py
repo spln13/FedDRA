@@ -1,97 +1,78 @@
-# -*- coding: utf-8 -*-
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.distributions import Categorical, Normal
+# PPO/nets.py
+import torch
+import torch.nn as nn
 
 
-def _mlp(in_dim, hidden=(128, 128), out_dim=None, act=nn.ReLU):
-    layers = []
-    last = in_dim
-    for h in hidden:
-        layers += [nn.Linear(last, h), act()]
-        last = h
-    if out_dim is not None:
-        layers += [nn.Linear(last, out_dim)]
-    return nn.Sequential(*layers)
-
-
-# =============== PPO1: 剪枝率/剪枝档 ===============
-class Stage1DiscreteActor(nn.Module):
-    """离散剪枝档（bins）"""
-
-    def __init__(self, s_dim, n_bins):
+# ===== Stage-1: 剪枝率打分（逐客户端 + 全局） =====
+class Stage1Actor(nn.Module):
+    def __init__(self, in_dim_client: int, in_dim_global: int, num_bins: int, hidden: int = 256):
         super().__init__()
-        self.body = _mlp(s_dim, (256, 256), n_bins)
+        self.num_bins = num_bins
+        self.net = nn.Sequential(
+            nn.Linear(in_dim_client + in_dim_global, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, num_bins)
+        )
+        nn.init.orthogonal_(self.net[-1].weight, gain=0.01)
+        nn.init.constant_(self.net[-1].bias, 0.0)
 
-    def forward(self, s):
-        return self.body(s)  # logits
-
-
-class Stage1ContActor(nn.Module):
-    """连续剪枝率（tanh → [p_min, p_max]）"""
-
-    def __init__(self, s_dim):
-        super().__init__()
-        self.mu = _mlp(s_dim, (256, 256), 1)
-        self.log_std = nn.Parameter(torch.zeros(1))
-
-    def forward(self, s):
-        mu = torch.tanh(self.mu(s))  # [-1,1]
-        std = self.log_std.exp().clamp(1e-4, 2.0)
-        return mu, std
-
-
-class Stage1Critic(nn.Module):
-    def __init__(self, s_dim):
-        super().__init__()
-        self.v = _mlp(s_dim, (256, 256), 1)
-
-    def forward(self, s):
-        return self.v(s)
-
-
-# =============== PPO2: 轮数分配 (softmax over clients) ===============
-class Stage2Actor(nn.Module):
-    """
-    输入：你可以用 “每客户端特征拼接后+全局特征” 的向量 s2_global
-    输出：对 k 个客户端的打分 logits[k]
-    """
-
-    def __init__(self, s_dim, k_max=256):
-        super().__init__()
-        self.body = _mlp(s_dim, (256, 256), k_max)  # 你在 forward 时 slice 到实际 k
-
-    def forward(self, s_global, k):
-        logits = self.body(s_global)[:, :k]  # [B, k]
+    def forward(self, S_cli: torch.Tensor, g: torch.Tensor):
+        # S_cli: [N, d1], g: [d_g]
+        N = S_cli.size(0)
+        g_exp = g.view(1, -1).expand(N, -1)
+        x = torch.cat([S_cli, g_exp], dim=-1)
+        logits = self.net(x)  # [N, num_bins]
         return logits
 
 
-class Stage2Critic(nn.Module):
-    def __init__(self, s_dim):
+class Stage1Critic(nn.Module):
+    def __init__(self, in_dim_client: int, in_dim_global: int, hidden: int = 256):
         super().__init__()
-        self.v = _mlp(s_dim, (256, 256), 1)
+        self.net = nn.Sequential(
+            nn.Linear(in_dim_client + in_dim_global, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, 1)
+        )
 
-    def forward(self, s):
-        return self.v(s)
-
-
-# =============== 采样/评估的工具函数 ===============
-def sample_discrete(logits, tau=1.0):
-    logits = (logits / max(tau, 1e-6))
-    logits = torch.nan_to_num(logits, nan=0.0).clamp(-40, 40)
-    logits = logits - logits.max(dim=-1, keepdim=True).values
-    dist = Categorical(logits=logits)
-    a = dist.sample()
-    logp = dist.log_prob(a)
-    ent = dist.entropy()
-    return a, logp, ent, dist
+    def forward(self, S_cli: torch.Tensor, g: torch.Tensor):
+        N = S_cli.size(0)
+        g_exp = g.view(1, -1).expand(N, -1)
+        x = torch.cat([S_cli, g_exp], dim=-1)
+        V = self.net(x)  # [N,1]
+        return V
 
 
-def sample_continuous(mu, std, p_min, p_max):
-    dist = Normal(mu, std)
-    x = dist.rsample()  # reparam
-    y = torch.tanh(x)  # [-1,1]
-    p = (y + 1) / 2 * (p_max - p_min) + p_min
-    logp = dist.log_prob(x) - torch.log(1 - y.pow(2) + 1e-8)
-    logp = logp.sum(dim=-1)
-    ent = dist.entropy().sum(dim=-1)
-    return p, logp, ent, dist
+# ===== Stage-2: 轮数打分（逐客户端 + 全局） =====
+class Stage2Actor(nn.Module):
+    def __init__(self, in_dim_client: int, in_dim_global: int, hidden: int = 256):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim_client + in_dim_global, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, 1)  # 每个 client 一个 logit
+        )
+
+    def forward(self, S_cli: torch.Tensor, g: torch.Tensor):
+        # S_cli: [N, d2], g: [d_g]
+        N = S_cli.size(0)
+        g_exp = g.view(1, -1).expand(N, -1)
+        x = torch.cat([S_cli, g_exp], dim=-1)
+        logits = self.net(x).squeeze(-1)  # [N]
+        return logits.view(1, N)  # [1, N] (与旧代码兼容)
+
+
+class Stage2Critic(nn.Module):
+    def __init__(self, in_dim_global: int, hidden: int = 256):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim_global, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, 1)
+        )
+
+    def forward(self, g: torch.Tensor):
+        # g: [d_g] 或 [B, d_g]；统一成 [B, d_g]
+        if g.dim() == 1:
+            g = g.view(1, -1)
+        V = self.net(g)  # [B,1]
+        return V
