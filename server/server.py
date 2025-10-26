@@ -38,6 +38,7 @@ class Server(object):
         self.ppo_config.s1.num_bins = len(prune_bins)
         self.ppo_config.s1.p_low = float(min(prune_bins))
         self.ppo_config.s1.p_high = float(max(prune_bins))
+        self.ppo_config.s1.prune_bins = prune_bins
         # 轮数范围与总预算（softmax 后平均分配的期望）
         self.ppo_config.s2.E_min = E_min
         self.ppo_config.s2.E_max = E_max
@@ -266,6 +267,9 @@ class Server(object):
         # 全局上下文 g
         g = torch.tensor([Tmin, Tmean, Tmax, Tstd, acc_now, float(N)],
                          dtype=torch.float32, device=self.device)               # [6]
+
+        print(f"[dbg] S1_cli shape: {S1_cli.shape}, g shape: {g.shape}")
+        # 期望：S1_cli = [N, 6], g = [6]
 
         # ===== C) 两阶段奖励（基于上一轮结果） =====
         # —— Stage-1：逐客户端奖励向量（慢→剪多、难/数据多→剪少；附秩一致项）

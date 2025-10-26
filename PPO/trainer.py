@@ -11,8 +11,17 @@ from .buffer import SimpleTrajBuffer
 from .nets import Stage1Actor, Stage1Critic, Stage2Actor, Stage2Critic
 
 
+def _reduce_global_g(g: torch.Tensor) -> torch.Tensor:
+    """
+    buffer.stack() 之后 g 可能是 [K, d_g]；这里把它还原成 [d_g]（取最近一条）。
+    """
+    if g.dim() == 2:
+        return g[-1]
+    return g
+
+
 class _PPOCore:
-    def __init__(self, actor: nn.Module, critic: nn.Module, cfg_common: TwoStageConfig, device: str):
+    def __init__(self, actor: nn.Module, critic: nn.Module, cfg_common, device: str):
         self.actor = actor
         self.critic = critic
         self.cfg = cfg_common
@@ -21,14 +30,11 @@ class _PPOCore:
         self.opt = torch.optim.Adam(params, lr=cfg_common.lr)
 
     def _compute_adv(self, r, v, v_next, done):
-        # r, v, v_next, done: [B,1] or [T*B,1]
-        gamma, lam = self.cfg.gamma, self.cfg.gae_lambda
-        # 按样本独立（T=1时等价）：直接 delta/adv（简化）
+        # 这里按照样本独立（T=1）的简化版 GAE：直接用 delta 归一化
         with torch.no_grad():
-            delta = r + gamma * (1 - done) * v_next - v
-            adv = delta.clone()
+            delta = r + self.cfg.gamma * (1 - done) * v_next - v
+            adv = (delta - delta.mean()) / (delta.std() + 1e-8)
             ret = adv + v
-            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
         return adv, ret
 
 
@@ -36,7 +42,7 @@ class TwoStagePPO:
     """
     两阶段 PPO：
       Stage-1: 逐客户端离散动作 -> 剪枝率 bins
-      Stage-2: 逐客户端打分 -> softmax 分配 τ_total 得到 E
+      Stage-2: 逐客户端打分 -> softmax 分配 τ_total 得到 E（critic-only 稳定版）
     """
 
     def __init__(self, cfg: TwoStageConfig):
@@ -46,14 +52,17 @@ class TwoStagePPO:
         # ====== Stage-1 ======
         self.s1_actor = Stage1Actor(cfg.s1.d_client, cfg.s1.d_global, cfg.s1.num_bins, cfg.s1.hidden).to(self.device)
         self.s1_critic = Stage1Critic(cfg.s1.d_client, cfg.s1.d_global, cfg.s1.hidden).to(self.device)
-        self.ppo1 = _PPOCore(self.s1_actor, self.s1_critic, cfg.common, self.device)
-        # 剪枝 bins
-        self.prune_bins = torch.linspace(cfg.s1.p_low, cfg.s1.p_high, cfg.s1.num_bins, device=self.device)
+        self.ppo1 = _PPOCore(self.s1_actor, self.s1_critic, cfg.common, str(self.device))
+        # 剪枝 bins（若 cfg.s1.prune_bins 为空，则用 linspace 生成）
+        if getattr(cfg.s1, "prune_bins", None) and len(cfg.s1.prune_bins) > 0:
+            self.prune_bins = torch.tensor(cfg.s1.prune_bins, dtype=torch.float32, device=self.device)
+        else:
+            self.prune_bins = torch.linspace(cfg.s1.p_low, cfg.s1.p_high, cfg.s1.num_bins, device=self.device)
 
         # ====== Stage-2 ======
         self.s2_actor = Stage2Actor(cfg.s2.d_client, cfg.s2.d_global, cfg.s2.hidden).to(self.device)
         self.s2_critic = Stage2Critic(cfg.s2.d_global, cfg.s2.hidden).to(self.device)
-        self.ppo2 = _PPOCore(self.s2_actor, self.s2_critic, cfg.common, self.device)
+        self.ppo2 = _PPOCore(self.s2_actor, self.s2_critic, cfg.common, str(self.device))
 
         # buffers
         self.buf1 = SimpleTrajBuffer(device=str(self.device))
@@ -65,15 +74,16 @@ class TwoStagePPO:
         str, torch.Tensor]:
         """
         S1_cli: [N, d1] 逐客户端特征
-        g     : [d_g]   全局上下文
+        g     : [d_g] 或 [K, d_g] 全局上下文（内部会归约到 [d_g] 使用）
         """
-        logits = self.s1_actor(S1_cli, g)  # [N, B]
+        g_eff = _reduce_global_g(g)
+        logits = self.s1_actor(S1_cli, g_eff)  # [N, B]
         tau = self.cfg.s1.tau_e
         probs = torch.softmax(logits / tau, dim=-1)
         dist = Categorical(probs=probs)
         a = torch.argmax(probs, dim=-1) if deterministic else dist.sample()  # [N]
         logp = dist.log_prob(a)  # [N]
-        v = self.s1_critic(S1_cli, g)  # [N,1]
+        v = self.s1_critic(S1_cli, g_eff)  # [N,1]
         p = self.prune_bins[a].unsqueeze(-1)  # [N,1]
         return dict(p=p, a=a, logp=logp, v=v, probs=probs, logits=logits)
 
@@ -81,7 +91,7 @@ class TwoStagePPO:
                                 s: tuple, a: torch.Tensor, logp: torch.Tensor, v: torch.Tensor,
                                 r: torch.Tensor, s_next: tuple, done: Optional[torch.Tensor] = None):
         """
-        s:      (S1_cli, g)  -> ([N,d1], [d_g])  注意：可直接传你缓存的上一轮值
+        s:      (S1_cli, g)  -> ([N,d1], [d_g] or [K,d_g])
         a:      [N]          离散 bin 索引
         logp:   [N]
         v:      [N,1]
@@ -104,6 +114,9 @@ class TwoStagePPO:
         r = traj["r"]
         S1_cli2, g2 = traj["s_next"]
         done = traj["done"]
+
+        g = _reduce_global_g(g)
+        g2 = _reduce_global_g(g2)
 
         with torch.no_grad():
             v_next = self.s1_critic(S1_cli2, g2)
@@ -141,18 +154,17 @@ class TwoStagePPO:
                       tau_total: int, E_min: int, E_max: int,
                       deterministic: bool = False) -> Dict[str, Any]:
         """
-        S2_cli:   [N, d2] 逐客户端特征
-        g:        [d_g]   全局上下文
+        S2_cli:   [N, d2] 逐客户端特征（内部会与 g 智能合并）
+        g:        [d_g] 或 [K,d_g]
         tau_total: int    总预算（轮数总和）
         """
-        logits = self.s2_actor(S2_cli, g)  # [1, N]
+        g_eff = _reduce_global_g(g)
+        logits = self.s2_actor(S2_cli, g_eff)  # [1, N]
         tau = self.cfg.s2.tau_e
         probs = torch.softmax(logits / tau, dim=-1)  # [1,N]
 
-        # 预算分配 → 整数映射
         alloc = (probs[0] * float(max(tau_total, 1))).cpu().numpy()  # [N]
         E = np.clip(np.round(alloc), E_min, E_max).astype(int)
-        # 总和校正
         diff = int(tau_total - int(E.sum()))
         if diff != 0:
             order = np.argsort(-probs[0].cpu().numpy()) if diff > 0 else np.argsort(probs[0].cpu().numpy())
@@ -164,18 +176,18 @@ class TwoStagePPO:
                     E[idx] = cand
                     diff += (-1 if diff > 0 else +1)
 
-        v = self.s2_critic(g)  # [1,1]
+        v = self.s2_critic(g_eff)  # [1,1]
         return dict(E=E, probs=probs, logits=logits, v=v)
 
     def store_transition_stage2(self,
                                 s: torch.Tensor, logits: torch.Tensor, v: torch.Tensor,
                                 r: torch.Tensor, s_next: torch.Tensor, done: Optional[torch.Tensor] = None):
         """
-        s:       g 或者 (S2_cli, g) 均可，这里用 g（[1,d_g]），简化 Critic 学习稳定
-        logits:  [1,N]   （保留以便需要时推断 N；但现在 update 不依赖 k）
+        s:       g 或者 (S2_cli, g) 均可，这里用 g（[1,d_g] 或 [K,d_g]）
+        logits:  [1,N]   （保留以便需要时推断 N；当前 update 不依赖）
         v:       [1,1]
-        r:       [1,1] 或 [1] 全局奖励
-        s_next:  [1,d_g]
+        r:       [1,1] 全局奖励
+        s_next:  [1,d_g] 或 [K,d_g]
         done:    [1,1]
         """
         if done is None:
@@ -186,23 +198,19 @@ class TwoStagePPO:
         if len(self.buf2) == 0:
             return {}
         traj = self.buf2.stack()
-        g = traj["s"]  # [B, d_g]
-        logits_saved = traj["a_logits"]  # [B, 1, N] 或 [B, N] (拼接时会展开)
-        v_old = traj["v"]  # [B,1]
-        r = traj["r"]  # [B,1]
-        g2 = traj["s_next"]  # [B, d_g]
-        done = traj["done"]  # [B,1]
+        g = traj["s"]
+        v_old = traj["v"]
+        r = traj["r"]
+        g2 = traj["s_next"]
+        done = traj["done"]
+
+        g = _reduce_global_g(g)
+        g2 = _reduce_global_g(g2)
 
         with torch.no_grad():
             v_next = self.s2_critic(g2)
         adv, ret = self.ppo2._compute_adv(r, v_old, v_next, done)
 
-        # 直接用当前策略的 logits，Stage-2 是配额分配；不做离散 logp
-        logits = self.s2_actor(g=g, S_cli=torch.zeros(1, 1, device=self.device)) if False else None
-        # ↑ 保留兼容位；实际我们只优化 critic（actor靠前向影响选择，或采用离线塑形）
-
-        # 这里采用“critic-only”更新，actor 通过选择阶段 + 奖励塑形间接学习；
-        # 若你希望显式 actor 更新，可引入 Dirichlet/Concrete 分布的连续策略损失，这里先稳健起见只更 critic。
         v = self.s2_critic(g)
         critic_loss = F.mse_loss(v, ret)
 
