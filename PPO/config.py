@@ -24,6 +24,7 @@ class Stage1Cfg:
     p_low: float = 0.0
     p_high: float = 0.5
     num_bins: int = 6
+    prune_bins: List[float] = field(default_factory=list)  # If empty, auto-generate linspace between p_low and p_high with num_bins
     # 采样温度
     tau_e: float = 1.2
 
