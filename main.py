@@ -37,7 +37,7 @@ def fedAvg(args):
         final_acc.append(acc)
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
-    print("#######Max Acc: {:.2f}%".format(final_acc))
+    print("#######Max Acc: {:.2f}%".format(max(final_acc)))
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
 
@@ -72,9 +72,21 @@ def fedBN(args):
         final_acc.append(acc)
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
-    print("#######Max Acc: {:.2f}%".format(final_acc))
+    print("#######Max Acc: {:.2f}%".format(max(final_acc)))
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
+
+
+
+def fedProx(args):
+    server = Server(args)     # 你的 Server 初始化里可将 mu/epochs 存起来
+    server.fedprox_mu = args.prox_mu
+    server.fedprox_local_epochs = args.local_epochs
+
+    # 训练若干轮
+    for r in range(args.rounds):
+        print(f"--- FedProx Round {r} ---")
+        server.fedprox_do(local_epochs=args.local_epochs, mu=args.prox_mu)
 
 
 
@@ -117,7 +129,7 @@ def fedDRA(args):
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
-    print("#######Max Acc: {:.2f}%".format(final_acc))
+    print("#######Max Acc: {:.2f}%".format(max(final_acc)))
     cal_run_time(server)
     print_reward(server.rewards)
 
