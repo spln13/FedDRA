@@ -77,7 +77,11 @@ class Server(object):
 
         self.rewards = []
         self.client_wait_times = []
+        self.round_time_diff = []
         self.total_run_time = 0.
+        self.R1_list = []
+        self.R2_list = []
+        self.loss_list = []
 
         # ========= 这里添加：EMA 归一化器（只初始化一次） =========
         class _EmaNorm:
@@ -233,13 +237,25 @@ class Server(object):
 
         # ===== C) 奖励（上一轮结果） =====
         # R1：拉平单位epoch时长（max/min 越小越好）
-        ratio_mm = (T_epoch.max() / max(T_epoch.min(), 1e-6)) if len(T_epoch) else 1.0
-        MD = 1.5
-        R1 = float(MD - ratio_mm)
 
-        # R2：总训练时长的极差（min - max，最大化≈最小化拖尾差）
+        # ===== C) 奖励 =====
+        ratio_mm = (T_epoch.max() / max(T_epoch.min(), 1e-6)) if len(T_epoch) else 1.0
+
+        # 平滑指数形式 + 局部方差正则
+        R1_base = np.exp(- (ratio_mm - 1))  # 越接近1越好
+        var_T = np.var(T_epoch / T_epoch.mean())  # 方差惩罚
+        delta_p = np.abs(np.array(p_exec) - np.array(prev_p)).mean() if len(p_exec) else 0.0
+
+        R1 = float(R1_base - 0.3 * var_T - 0.1 * delta_p)
+        R1 = np.clip(R1, -1.0, 1.0)  # 限制幅度稳定训练
+
+        # R2 保持原定义
         R2 = float(min(times) - max(times)) if len(times) > 0 else 0.0
-        print(f"round {self.round_id}  R1 {R1:.4f}  R2 {R2:.4f}")
+        self.R1_list.append(R1)
+        self.R2_list.append(R2)
+        self.loss_list.append(sum(losses) / len(losses))
+        self.round_time_diff.append(max(times) - min(times))
+        print(f"round {self.round_id}  R1 {R1:.4f}  R2 {R2:.4f} loss {sum(losses) / len(losses)}")
 
         # ===== D) 写入 buffer（近似 on-policy） =====
         s1_mean = s1.mean(dim=0, keepdim=True)  # [1,1]
@@ -433,6 +449,8 @@ class Server(object):
             client.model.load_state_dict(state)
         end_time = time.time()
         self.total_run_time += end_time - start_time
+        self.round_time_diff.append(max(client_do_time) - min(client_do_time))
+
 
     def fedavg_aggregate(self):
         server_model = self.server_model
@@ -460,9 +478,8 @@ class Server(object):
         self.aggregate()
         end_time = time.time()
         self.total_run_time += end_time - start_time
+        self.round_time_diff.append(max(client_do_time) - min(client_do_time))
 
-    def fedbn_aggregate(self):
-        pass
 
     def fedprox_aggregate(self, client_models, weights=None):
         """
@@ -506,13 +523,14 @@ class Server(object):
         times = []
         do_times = []
 
+
         # 本地训练
         for client in self.clients:
             # 如果你想全局统一 E，这里可以覆盖：client.training_intensity = local_epochs
             ret = client.fedprox_do(server_state, epochs=local_epochs, mu=mu,
                                     lr=lr, momentum=momentum, weight_decay=weight_decay)
             # ret 同 feddra_do 的 9 元组
-            _, total_time, _, _, _, _, _, _, do_time = ret
+            _, total_time, _, _, _, _, _, avg_loss, do_time = ret
             times.append(float(total_time))
             do_times.append(float(do_time))
 

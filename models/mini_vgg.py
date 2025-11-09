@@ -21,7 +21,7 @@ class MiniVGG(nn.Module):
         self.classifier = nn.Linear(self.cfg[-1], num_classes)
         self._generate_mask()
         if init_weights:
-            self._initialize_weights()
+            self.initialize_weights()
 
     def make_layers(self, cfg, batch_norm=True):
         layers = []
@@ -70,7 +70,7 @@ class MiniVGG(nn.Module):
                 mask.append(arr)
         self.mask = mask
 
-    def _initialize_weights(self):
+    def initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels

@@ -22,6 +22,7 @@ def fedAvg(args):
         clients.append(client)
     server = Server(device, clients, dataset, model_name, batch_norm=False)
     print("fedAvg Start Training...")
+    acc_list = []
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
         accs = []
@@ -30,16 +31,19 @@ def fedAvg(args):
             acc = c.test()
             accs.append(acc)
         print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
-        max_acc = max(max_acc, sum(accs) / len(accs))
+        acc_list.append(sum(accs) / len(accs))
     final_acc = []
     for c in clients:
         acc = c.test()
         final_acc.append(acc)
         print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
 
-    print("#######Max Acc: {:.2f}%".format(max(final_acc)))
+    print("#######Max Acc: {:.2f}%".format(max(acc_list)))
     print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
     cal_run_time(server)
+    print_time_diffs(server.round_time_diff)
+    print_loss(server.loss_list)
+    print_acc_list(acc_list)
 
 
 def fedBN(args):
@@ -91,10 +95,11 @@ def fedProx(args):
 
 
 def fedDRA(args):
-    client_nums = 5
-    fl_rounds = 200
+    client_nums = 10
+    fl_rounds = 500
     model_name = 'MiniVGG'
     dataset = 'cifar10'
+    pruning_ablation = True  # 是否进行剪枝率消融实验
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # ppo related
@@ -105,7 +110,7 @@ def fedDRA(args):
     E_min = 3  # 最小训练轮次
     E_max = 17  # 最大训练轮次
     hidden = 256  # PPO网络隐藏层维度
-    prune_bins = (0.1, 0.2, 0.3, 0.4)
+    prune_bins = (0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4)
     clients = []
     max_acc = 0.
     for i in range(client_nums):
@@ -113,6 +118,7 @@ def fedDRA(args):
         clients.append(client)
     server = Server(device, clients, dataset, model_name, prune_bins, E_min, E_max, batch_norm=True, warmup_rounds=0)
     print("fedDRA Start Training...")
+    acc_list = []
     for r in range(fl_rounds):
         print(f"--- FL Round {r} ---")
         server.feddra_do()  # 每一轮的逻辑包在server内实现
@@ -121,18 +127,16 @@ def fedDRA(args):
             acc = c.test()
             accs.append(acc)
         print("Round {} Test Acc: {:.2f}%".format(r, sum(accs) / len(accs)))
-        max_acc = max(max_acc, sum(accs) / len(accs))
-    final_acc = []
-    for c in clients:
-        acc = c.test()
-        final_acc.append(acc)
-        print("Client {} Test Acc: {:.2f}%".format(c.id, acc))
+        acc_list.append(sum(accs) / len(accs))
 
-    print("#######Final Average Acc: {:.2f}%".format(sum(final_acc) / len(final_acc)))
-    print("#######Max Acc: {:.2f}%".format(max(final_acc)))
+
+    print("#######Max Acc: {:.2f}%".format(max(acc_list)))
     cal_run_time(server)
-    print_reward(server.rewards)
-
+    print_reward(server.R1_list)
+    print_reward(server.R2_list)
+    print_time_diffs(server.round_time_diff)
+    print_loss(server.loss_list)
+    print_acc_list(acc_list)
 
 
 def cal_run_time(server):
@@ -150,6 +154,26 @@ def print_reward(rewards):
         print("{:.4f} ".format(r), end="")
     print()
 
+
+def print_acc_list(accs):
+    print("Accs: ", end="")
+    for r in accs:
+        print("{:.4f} ".format(r), end="")
+    print()
+
+
+def print_time_diffs(times):
+    print("time_diff: ", end="")
+    for r in times:
+        print("{:.4f} ".format(r), end="")
+    print()
+
+
+def print_loss(losses):
+    print("Losses: ", end="")
+    for r in losses:
+        print("{:.4f} ".format(r), end="")
+    print()
 
 
 def main():

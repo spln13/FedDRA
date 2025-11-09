@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 class Client(object):
     def __init__(self, client_id, device, model_name, training_intensity, dataset_name, batch_size=16, s=0.001,
-                 base_dir="./dataset", batch_norm=True):
+                 base_dir="./dataset", batch_norm=True, pruning_ablation = True):
         self.id = client_id
         self.device = device
         self.model_name = model_name
@@ -24,7 +24,7 @@ class Client(object):
         self.last_pruning_rate = 0.
         self.cur_pruning_rate = 0.
         self.training_epochs_for_prune = 8
-        self.finetune_epochs = 4
+        self.finetune_epochs = 10
         self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
         self.last_acc = 0.
         self.base_dir = base_dir
@@ -32,6 +32,8 @@ class Client(object):
         self.client_do_times = []  # client运行时间数组，包括剪枝时间
         self.client_total_do_time = 0.
         self.batch_norm = batch_norm
+        self.pruning_ablation = pruning_ablation
+        self.server_model = self._build_model(batch_norm=batch_norm)
 
     def feddra_do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -40,8 +42,27 @@ class Client(object):
         # 2. 开始本地训练epochs轮次，统计for ppo的指标
         # 3. 需要返回的指标:
         prune_time = 0.
+        kd_acc = 0.
+        pruning_rate_changed = False
         if self.cur_pruning_rate != self.last_pruning_rate:
             # 剪枝率不一致，需要重新剪枝
+            pruning_rate_changed = True
+            if self.pruning_ablation:
+                # 对比空模型知识蒸馏，相同轮数，对比准确率
+                # 从全局模型剪枝，然后清空参数，进行知识蒸馏
+                # 1) 新建“空”学生（可同步 BN 统计，但不复制卷积/全连接权重）
+                student = self._new_minivgg_student(sync_bn_from_server=True, init="kaiming")
+                # 2) 先把学生剪到目标比例（保证与“恢复机制”同一目标容量）
+                student = self.prune(student, self.cur_pruning_rate)
+                # 3) 用 server full 作为 teacher 做 KD
+                self.distill_train(student, self.server_model,
+                                   distill_epoch=getattr(self, "distill_epochs", 10),
+                                   T=getattr(self, "kd_T", 2.0),
+                                   alpha=getattr(self, "kd_alpha", 0.7))
+
+                # 4) 测试学生模型的准确率
+                kd_acc = self.for_kd_test(student)
+
             prune_start_time = time.time()
             print("[client{}, round{}] pruning rate changed from {:.2f} to {:.2f}, need to prune the model.".format(
                 self.id, self.round, self.last_pruning_rate, self.cur_pruning_rate))
@@ -51,11 +72,20 @@ class Client(object):
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
 
+
         # total_times是用来for PPO决策，client_do_times是用来统计wait_time
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
         total_time = self.mock_time_delay(total_time)
         self.client_do_times.append(total_time + prune_time)
         self.client_total_do_time += total_time + prune_time
+        if self.pruning_ablation and pruning_rate_changed:
+            acc = self.test()
+            # 打印acc和kd_acc对比
+            print("[client{}, round{}] after pruning rate changed to {:.2f}, test acc: {:.2f}, kd acc: {:.2f}".format(
+                self.id, self.round, self.cur_pruning_rate, acc, kd_acc))
+
+
+
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
               "local_data_size: {}, pruning_rate: {:.2f}, training_intensity: {}, prune_time: {}".format(self.id,
                                                                                                          self.round,
@@ -155,45 +185,13 @@ class Client(object):
         print(f"[client{self.id}] Predictive entropy: {entropy:.6f}")
 
         # ✅ 本地测试集acc
-        acc = self.local_test(model)
-        print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
+        # acc = self.local_test(model)
+        # print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
 
         self.model = model
         # ✅ 返回 acc、训练时间、平均loss、信息熵、本地数据量Di
-        return acc, total_time, avg_loss, entropy, local_data_size
+        return 0., total_time, avg_loss, entropy, local_data_size
 
-    def first_evaluate(self):
-        """
-        算法开始时，训练模型得到初始模型准确度和训练时间，for后续PPO得到初始模型剪枝率和训练轮数
-        """
-        model = self.load_model()
-        # train model 50 轮
-        epoch = 1
-        model = model.to(self.device)
-        train_loader = self.load_train_data()
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
-        criterion = nn.CrossEntropyLoss()
-        losses = []
-        start_time = time.time()
-        for epoch in range(epoch):
-            model.train()
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), leave=False, disable=True)
-            for batch_idx, (data, target) in train_loader_tqdm:
-                data, target = data.to(self.device), target.to(self.device)
-                optimizer.zero_grad()
-                output = model(data)
-                loss = criterion(output, target)
-                losses.append(loss.item())
-                loss.backward()
-                optimizer.step()
-                train_loader_tqdm.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.6f}')
-        end_time = time.time()
-        training_time = end_time - start_time
-
-        # 在client本地测试集跑一下得到acc一并返回给server
-        acc = self.local_test(model)
-
-        return acc, training_time
 
     def local_test(self, model) -> float:
         # client使用本地小测试集进行测试，返回准确率供PPO模型参考
@@ -402,6 +400,49 @@ class Client(object):
 
         return full_model
 
+    def distill_train(self, student_model, teacher_model, distill_epoch=10, T=2.0, alpha=0.7):
+        """
+        空模型（或随机初始化后）用全量 server_model 作为 teacher 做蒸馏。
+        student_model: 已经按目标剪枝率处理好的学生模型
+        teacher_model: 未剪枝的 server full 模型
+        """
+        student = student_model.to(self.device).train()
+        teacher = teacher_model.to(self.device).eval()
+
+        lr = (getattr(self, "optimizer_cfg", {}) or {}).get("lr", 0.01)
+        momentum = (getattr(self, "optimizer_cfg", {}) or {}).get("momentum", 0.9)
+        wd = (getattr(self, "optimizer_cfg", {}) or {}).get("wd", 0.0)
+        opt = torch.optim.SGD(student.parameters(), lr=lr, momentum=momentum, weight_decay=wd)
+
+        ce = torch.nn.CrossEntropyLoss()
+        kl = torch.nn.KLDivLoss(reduction="batchmean")
+        train_loader = self.load_train_data()
+
+        for _ in range(int(distill_epoch)):
+            for x, y in train_loader:
+                x, y = x.to(self.device), y.to(self.device)
+
+                with torch.no_grad():
+                    t_logits = teacher(x)
+
+                s_logits = student(x)
+
+                # 硬标签 CE
+                loss_ce = ce(s_logits, y)
+                # 软标签 KD（注意温度平方系数）
+                loss_kd = kl(
+                    torch.nn.functional.log_softmax(s_logits / T, dim=1),
+                    torch.nn.functional.softmax(t_logits / T, dim=1)
+                ) * (T * T)
+
+                loss = alpha * loss_kd + (1.0 - alpha) * loss_ce
+
+                opt.zero_grad()
+                loss.backward()
+                opt.step()
+
+
+
 
     def test(self):
         model = self.load_model()
@@ -422,6 +463,27 @@ class Client(object):
                                                                         test_loader.dataset)))
         acc = 100. * correct / len(test_loader.dataset)
         return acc
+
+
+    def for_kd_test(self, student_model):
+        test_loader = self.load_test_data(batch_size=128)
+        student_model = student_model.to(self.device)
+        student_model.eval()
+        correct = 0
+        for data, target in test_loader:
+            data, target = data.to(self.device), target.to(self.device)
+            with torch.no_grad():
+                data, target = data, target
+            output = student_model(data)
+            pred = output.data.max(1, keepdim=True)[1]
+            correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+        print('\nclient_id: {}, Test acc: {}/{} ({:.1f}%)\n'.format(self.id, correct,
+                                                                    len(test_loader.dataset),
+                                                                    100. * correct / len(
+                                                                        test_loader.dataset)))
+        acc = 100. * correct / len(test_loader.dataset)
+        return acc
+
 
     def _npz_path(self, split: str) -> str:
         return os.path.join(self.base_dir, self.dataset_name, split, f"{self.id}.npz")
@@ -528,21 +590,39 @@ class Client(object):
         client_last_pruning_rate = float(getattr(self, "cur_pruning_rate", 0.0))
         client_epochs = int(local_epochs)
 
-        print(f"[client{self.id}] Average training loss: {avg_loss:.6f}")
-        print(f"[client{self.id}] Predictive entropy: {entropy:.6f}")
-        print(
-            f"\nclient_id: {self.id}, Test acc: {int(acc / 100.0 * local_data_size)}/{local_data_size} ({acc:.1f}%)\n")
-
-        print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
         print(f"[client{self.id}, round{getattr(self, 'round_id', -1)}] "
-              f"finished training, acc: {acc:.2f}, time: {total_time:.2f}, "
-              f"avg_loss: {avg_loss:.6f}, entropy: {entropy:.6f}, "
               f"local_data_size: {local_data_size}, pruning_rate: {client_last_pruning_rate:.2f}, "
               f"training_intensity: {client_epochs}, prox_mu: {mu}, prune_time: 0.0")
 
-        return (acc, total_time, entropy, local_data_size, int(self.id),
+        return (0, total_time, 0, local_data_size, int(self.id),
                 client_last_pruning_rate, client_epochs, avg_loss, do_time)
 
+    def _new_minivgg_student(self, sync_bn_from_server: bool = True, init: str = "kaiming"):
+        """
+        新建一个 MiniVGG 学生模型：
+          - 只复制 BN 的 running_mean / running_var / num_batches_tracked（可选）
+          - 其余权重随机初始化（默认 kaiming）
+        """
+        assert self.model_name == "MiniVGG", "Only MiniVGG is supported by _new_minivgg_student()."
+        student = self._build_model(batch_norm=True).to(self.device).train()
+
+        # 随机初始化权重（保持“空模型”公正性）
+        if init == "kaiming":
+            for m in student.modules():
+                if isinstance(m, (torch.nn.Conv2d, torch.nn.Linear)):
+                    torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+                    if m.bias is not None:
+                        torch.nn.init.zeros_(m.bias)
+
+        # 可选：仅复制 BN 的 running stats，稳定训练，不影响“空权重”的设定
+        if sync_bn_from_server:
+            for sm, tm in zip(self.server_model.modules(), student.modules()):
+                if isinstance(sm, torch.nn.BatchNorm2d) and isinstance(tm, torch.nn.BatchNorm2d):
+                    tm.running_mean = sm.running_mean.detach().clone()
+                    tm.running_var = sm.running_var.detach().clone()
+                    tm.num_batches_tracked = sm.num_batches_tracked.detach().clone()
+
+        return student
 
     def mock_time_delay(self, total_time):
         # 用于模拟终端之间的性能差异，通过训练时间来反馈

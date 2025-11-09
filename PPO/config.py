@@ -5,11 +5,11 @@ from typing import List
 
 @dataclass
 class PPOCommonCfg:
-    lr: float = 3e-4
-    gamma: float = 0.99
+    lr: float = 1e-4
+    gamma: float = 0.95
     gae_lambda: float = 0.95
-    clip_coef: float = 0.2
-    ent_coef: float = 0.01
+    clip_coef: float = 0.1
+    ent_coef: float = 0.03
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     update_epochs: int = 4
