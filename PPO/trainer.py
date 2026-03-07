@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Categorical, Multinomial, Normal
+from torch.distributions import Categorical, Normal
 
 from .buffer import PPORolloutBuffer
 from .config import TwoStageConfig
@@ -72,6 +72,10 @@ class _PPOCore:
         adv, ret = self._compute_adv(r, v_old, v_next, done)
 
         logits = self.actor(s)
+        if "mask" in traj:
+            mask = traj["mask"].bool()
+            # Keep policy update consistent with action sampling-time feasible set.
+            logits = logits.masked_fill(~mask, -1e9)
         dist = Categorical(logits=logits / max(float(temperature), 1e-6))
         logp = dist.log_prob(a)
         logp_old = logp_old.view_as(logp)
@@ -191,20 +195,26 @@ class TwoStagePPO:
 
         self.device = dev
         self.prune_bins = torch.tensor(cfg.s1.prune_bins, dtype=torch.float32, device=dev)
+        self._s1_lr_scale = 1.0
+        self._s2_lr_scale = 1.0
 
     # ---------------- stage1 ----------------
     @torch.no_grad()
-    def select_pruning(self, s1_batch):
+    def select_pruning(self, s1_batch, valid_mask=None):
         s1 = s1_batch.to(self.device).float()
         v = self.s1_critic(s1)
         if self.s1_is_discrete:
             logits = self.s1_actor(s1)
+            mask = None
+            if valid_mask is not None:
+                mask = valid_mask.to(self.device).bool()
+                logits = logits.masked_fill(~mask, -1e9)
             a, logp, _, _ = sample_discrete(logits, tau=self.cfg.s1.tau_e)
             p = self.prune_bins[a].unsqueeze(-1)
-            return dict(p=p, a=a, logp=logp, v=v, logits=logits)
+            return dict(p=p, a=a, logp=logp, v=v, logits=logits, mask=mask)
         mu, std = self.s1_actor(s1)
         p, logp, _, _ = sample_continuous(mu, std, self.cfg.s1.p_min, self.cfg.s1.p_max)
-        return dict(p=p, a=p, logp=logp, v=v, logits=None)
+        return dict(p=p, a=p, logp=logp, v=v, logits=None, mask=None)
 
     # ---------------- stage2 helpers ----------------
     def _s2_actor_logits(self, s2_state, k):
@@ -272,6 +282,38 @@ class TwoStagePPO:
                 need -= step
         return counts
 
+    @staticmethod
+    def _sample_budget_sequence(logits_1d, budget, cap_per_client):
+        """
+        Autoregressive allocation:
+        sample one unit at a time with capacity mask, so no post-hoc repair is needed.
+        Returns counts, sequence indices and summed log-prob.
+        """
+        k = int(logits_1d.numel())
+        counts = torch.zeros(k, device=logits_1d.device, dtype=torch.long)
+        seq = []
+        logp_sum = torch.zeros((), device=logits_1d.device)
+
+        if budget <= 0:
+            return counts, torch.empty(0, device=logits_1d.device, dtype=torch.long), logp_sum
+
+        for _ in range(int(budget)):
+            mask = counts < int(cap_per_client)
+            if not bool(mask.any()):
+                break
+            step_logits = logits_1d.masked_fill(~mask, -1e9)
+            dist = Categorical(logits=step_logits)
+            idx = dist.sample()
+            logp_sum = logp_sum + dist.log_prob(idx)
+            counts[idx] += 1
+            seq.append(idx)
+
+        if len(seq) == 0:
+            seq_tensor = torch.empty(0, device=logits_1d.device, dtype=torch.long)
+        else:
+            seq_tensor = torch.stack(seq, dim=0).long()
+        return counts, seq_tensor, logp_sum
+
     # ---------------- stage2 ----------------
     @torch.no_grad()
     def select_epochs(self, s2_state, k=None, E_min=None, E_max=None):
@@ -298,21 +340,25 @@ class TwoStagePPO:
         if residual_budget <= 0:
             counts = torch.zeros(k, device=self.device, dtype=torch.long)
             logp = torch.zeros((), device=self.device)
+            seq = torch.empty(0, device=self.device, dtype=torch.long)
         else:
-            dist = Multinomial(total_count=int(residual_budget), probs=probs)
-            raw_counts = dist.sample().long()
-            counts = self._repair_counts(raw_counts, probs, residual_budget, cap_per_client)
-            logp = dist.log_prob(counts.float())
+            counts, seq, logp = self._sample_budget_sequence(
+                logits_1d=logits.squeeze(0),
+                budget=int(residual_budget),
+                cap_per_client=int(cap_per_client),
+            )
 
         E = counts + e_min
         return dict(
             E=E.long(),
             a=counts.long(),
+            seq=seq.long(),
             logp=logp,
             v=v,
             probs=probs,
             logits=logits.squeeze(0),
             residual_budget=int(residual_budget),
+            cap_per_client=int(cap_per_client),
         )
 
     @torch.no_grad()
@@ -321,8 +367,8 @@ class TwoStagePPO:
         return self.select_epochs(S2_cli, k=int(S2_cli.shape[0]), E_min=E_min, E_max=E_max)
 
     # ---------------- buffers ----------------
-    def store_transition_stage1(self, s, a, logp, v, r, s_next, done):
-        self.buf1.add(
+    def store_transition_stage1(self, s, a, logp, v, r, s_next, done, mask=None):
+        rec = dict(
             s=s,
             a=a,
             logp=logp,
@@ -331,12 +377,30 @@ class TwoStagePPO:
             s_next=s_next,
             done=torch.tensor([done], device=self.device),
         )
+        if mask is not None:
+            rec["mask"] = mask
+        self.buf1.add(**rec)
 
-    def store_transition_stage2(self, s, a, logp, v, r, s_next, done, residual_budget):
+    def store_transition_stage2(self, s, a, logp, v, r, s_next, done, residual_budget, seq=None, cap_per_client=None):
         a_tensor = a if torch.is_tensor(a) else torch.as_tensor(a, device=self.device)
         logp_tensor = logp if torch.is_tensor(logp) else torch.as_tensor(logp, device=self.device)
         k_tensor = torch.tensor([int(a_tensor.numel())], device=self.device, dtype=torch.long)
         budget_tensor = torch.tensor([int(residual_budget)], device=self.device, dtype=torch.long)
+        if cap_per_client is None:
+            cap_per_client = int(max(0, self.cfg.E_max - self.cfg.E_min))
+        cap_tensor = torch.tensor([int(cap_per_client)], device=self.device, dtype=torch.long)
+
+        seq_pad_len = int(max(0, self.cfg.s2.tau_total))
+        seq_pad = torch.full((seq_pad_len,), -1, device=self.device, dtype=torch.long)
+        seq_len = 0
+        if seq is not None:
+            seq_tensor = seq if torch.is_tensor(seq) else torch.as_tensor(seq, device=self.device)
+            seq_tensor = seq_tensor.long().view(-1)
+            seq_len = int(min(seq_tensor.numel(), seq_pad_len))
+            if seq_len > 0:
+                seq_pad[:seq_len] = seq_tensor[:seq_len]
+        seq_len_tensor = torch.tensor([seq_len], device=self.device, dtype=torch.long)
+
         self.buf2.add(
             s=s,
             a=a_tensor.long(),
@@ -347,6 +411,9 @@ class TwoStagePPO:
             done=torch.tensor([done], device=self.device),
             k=k_tensor,
             budget=budget_tensor,
+            cap=cap_tensor,
+            seq=seq_pad,
+            seq_len=seq_len_tensor,
         )
 
     def store_transition_stage2_per_client(self, S2_cli, r_vec, g=None, done=0):
@@ -363,7 +430,37 @@ class TwoStagePPO:
             s_next=S2_cli,
             done=done,
             residual_budget=out["residual_budget"],
+            seq=out.get("seq", None),
+            cap_per_client=out.get("cap_per_client", None),
         )
+
+    def _adaptive_kl_lr(self, core, observed_kl, stage="s1"):
+        cfg = self.cfg.common
+        if not getattr(cfg, "adaptive_kl", True):
+            return 1.0
+
+        target = max(float(cfg.target_kl), 1e-6)
+        low = float(getattr(cfg, "kl_low_ratio", 0.35)) * target
+        high = float(getattr(cfg, "kl_high_ratio", 1.5)) * target
+        up = float(getattr(cfg, "lr_scale_up", 1.08))
+        down = float(getattr(cfg, "lr_scale_down", 0.85))
+        s_min = float(getattr(cfg, "lr_scale_min", 0.4))
+        s_max = float(getattr(cfg, "lr_scale_max", 3.0))
+
+        attr = "_s1_lr_scale" if stage == "s1" else "_s2_lr_scale"
+        scale = float(getattr(self, attr, 1.0))
+        kl = float(observed_kl)
+        if kl < low:
+            scale *= up
+        elif kl > high:
+            scale *= down
+        scale = float(max(s_min, min(s_max, scale)))
+        setattr(self, attr, scale)
+
+        base_lr = float(cfg.lr)
+        for pg in core.opt.param_groups:
+            pg["lr"] = base_lr * scale
+        return scale
 
     # ---------------- updates ----------------
     def ppo_update_stage1(self):
@@ -376,6 +473,9 @@ class TwoStagePPO:
                 out = self.ppo1.update_discrete(traj, temperature=self.cfg.s1.tau_e)
             else:
                 out = self.ppo1.update_continuous(traj, self.cfg.s1.p_min, self.cfg.s1.p_max)
+            lr_scale = self._adaptive_kl_lr(self.ppo1, out["kl"], stage="s1")
+            out["lr"] = float(self.cfg.common.lr) * lr_scale
+            out["lr_scale"] = float(lr_scale)
             outs = out
             if out["kl"] > self.cfg.common.target_kl:
                 break
@@ -384,7 +484,6 @@ class TwoStagePPO:
 
     def _ppo_update_stage2_once(self, traj):
         s = traj["s"].float()
-        a = traj["a"].float()
         T = s.shape[0]
         logp_old = traj["logp"].float().view(T)
         v_old = traj["v"].float().view(T, -1)[:, :1]
@@ -392,33 +491,53 @@ class TwoStagePPO:
         s_next = traj["s_next"].float()
         done = traj["done"].float().view(T, 1)
 
-        if "k" not in traj or "budget" not in traj:
-            raise RuntimeError("Stage2 buffer must contain both 'k' and 'budget'.")
+        required = ("k", "budget", "cap", "seq", "seq_len")
+        if any(key not in traj for key in required):
+            raise RuntimeError("Stage2 buffer must contain 'k', 'budget', 'cap', 'seq', 'seq_len'.")
         k = int(traj["k"][0].item())
-        budget = int(traj["budget"][0].item())
 
         with torch.no_grad():
             v_next = self._s2_value(s_next).view(T, 1)
         adv, ret = self.ppo2._compute_adv(r, v_old, v_next, done)
 
         logits = self._s2_actor_logits(s, k) / max(float(self.cfg.s2.tau_e), 1e-6)
-        probs = torch.softmax(logits, dim=-1)
+        seq = traj["seq"].long()           # [T, L]
+        seq_len = traj["seq_len"].long().view(T)
+        cap_vec = traj["cap"].long().view(T)
+        budget_vec = traj["budget"].long().view(T)
 
-        if budget <= 0:
-            logp = torch.zeros_like(logp_old)
-            ratio = torch.ones_like(logp_old)
-            entropy = torch.zeros_like(logp_old)
-        else:
-            dist = Multinomial(total_count=budget, probs=probs)
-            logp = dist.log_prob(a)
-            ratio = (logp - logp_old).exp()
-            entropy = -(probs * torch.log(probs.clamp_min(1e-8))).sum(dim=-1)
+        logp = torch.zeros_like(logp_old)
+        entropy = torch.zeros_like(logp_old)
+
+        for t in range(T):
+            steps = int(min(seq_len[t].item(), budget_vec[t].item()))
+            if steps <= 0:
+                continue
+            cap_t = int(cap_vec[t].item())
+            counts = torch.zeros(k, device=self.device, dtype=torch.long)
+            ent_sum = torch.zeros((), device=self.device)
+            for step in range(steps):
+                idx = int(seq[t, step].item())
+                if idx < 0:
+                    break
+                mask = counts < cap_t
+                if not bool(mask.any()):
+                    break
+                step_logits = logits[t].masked_fill(~mask, -1e9)
+                dist = Categorical(logits=step_logits)
+                idx_tensor = torch.tensor(idx, dtype=torch.long, device=self.device)
+                logp[t] = logp[t] + dist.log_prob(idx_tensor)
+                ent_sum = ent_sum + dist.entropy()
+                counts[idx] += 1
+            entropy[t] = ent_sum / max(steps, 1)
+
+        ratio = (logp - logp_old).exp()
 
         adv_term = adv.squeeze(-1)
         if adv_term.dim() > 1:
             adv_term = adv_term.mean(dim=-1)
 
-        if budget <= 0:
+        if int(seq_len.max().item()) <= 0:
             actor_loss = torch.zeros((), device=self.device)
         else:
             surr1 = ratio * adv_term

@@ -83,6 +83,11 @@ class Server(object):
         self.lambda_E = getattr(self, "lambda_E", 0.0)  # （可选）算力感知 E 成本
         self.lambda_budget = getattr(self, "lambda_budget", 0.0)  # （可选）总预算
         self.E0_mean = getattr(self, "E0_mean", 10)  # （可选）期望平均本地轮数
+        # R2 shaping weights: balance accuracy progress vs. latency fairness.
+        self.w_r2_latency = getattr(self, "w_r2_latency", 0.8)
+        self.w_r2_acc = getattr(self, "w_r2_acc", 0.6)
+        self.w_r2_loss = getattr(self, "w_r2_loss", 0.3)
+        self.w_r2_switch = getattr(self, "w_r2_switch", 0.2)
 
         self.rewards = []
         self.client_wait_times = []
@@ -96,6 +101,16 @@ class Server(object):
         self._pending_s2 = None
         self.ema_latency_score = None
         self.ema_latency_alpha = getattr(self, "ema_latency_alpha", 0.1)
+        self.prev_train_acc = None
+        self.prev_eval_acc = None
+        self.prev_avg_loss = None
+        self.signal_alpha = getattr(self, "signal_alpha", 0.2)
+        self.loss_ema_alpha = getattr(self, "loss_ema_alpha", 0.2)
+        self.train_acc_ema = None
+        self.eval_acc_ema = None
+        self.loss_ema = None
+        self.prev_train_signal = None
+        self.prev_eval_signal = None
 
         # ========= 这里添加：EMA 归一化器（只初始化一次） =========
         class _EmaNorm:
@@ -122,10 +137,50 @@ class Server(object):
         self.norm_dp = _EmaNorm(0.05)  # 平均 Δp
         self.norm_ci = _EmaNorm(0.05)  # （可选）每轮平均耗时 c_i = T_i / E_i，用于 E 成本
 
+        # R2 分项归一化，提升 reward 尺度稳定性并减少项间“抢权重”。
+        self.r2_use_term_norm = getattr(self, "r2_use_term_norm", True)
+        self.r2_norm_alpha = getattr(self, "r2_norm_alpha", 0.08)
+        self.r2_term_clip = getattr(self, "r2_term_clip", 3.0)
+        self.r2_time_norm = _EmaNorm(self.r2_norm_alpha)
+        self.r2_acc_norm = _EmaNorm(self.r2_norm_alpha)
+        self.r2_loss_norm = _EmaNorm(self.r2_norm_alpha)
+        self.switch_pen_ema = 0.0
+        self.switch_pen_alpha = getattr(self, "switch_pen_alpha", 0.1)
+
         # 进展/水平项需要的基线
         self.ema_acc = 0.0
         self.best_acc = 0.0
         # ======================================================
+
+    @staticmethod
+    def _ema_update(old_value, new_value, alpha):
+        x = float(new_value)
+        if old_value is None:
+            return x
+        a = float(np.clip(alpha, 1e-4, 1.0))
+        return float((1.0 - a) * float(old_value) + a * x)
+
+    def _normalize_r2_component(self, key, value):
+        v = float(value)
+        if not self.r2_use_term_norm:
+            return v
+        if key == "time":
+            normer = self.r2_time_norm
+        elif key == "acc":
+            normer = self.r2_acc_norm
+        elif key == "loss":
+            normer = self.r2_loss_norm
+        else:
+            return v
+        normer.update(v)
+        z = normer.norm(v)
+        return float(np.clip(z, -self.r2_term_clip, self.r2_term_clip))
+
+    def _normalize_switch_penalty(self, switch_penalty):
+        p = float(max(0.0, switch_penalty))
+        self.switch_pen_ema = self._ema_update(self.switch_pen_ema, p, self.switch_pen_alpha)
+        scale = max(float(self.switch_pen_ema), 1e-6)
+        return float(np.clip(p / scale, 0.0, self.r2_term_clip))
 
     def _init_server_model(self, batch_norm=True):
         if self.model_name == 'MiniVGG':
@@ -199,6 +254,36 @@ class Server(object):
         else:
             x = float(np.clip(x, float(self.agent.cfg.p_low), float(self.agent.cfg.p_high)))
         return x
+
+    def _build_stage1_action_mask(self, p_exec, bins):
+        """
+        Build per-client feasible prune-bin mask before sampling policy actions.
+        This makes sampled action closer to actual executable action space.
+        """
+        if bins is None:
+            return None
+        bins = bins.to(self.device).float()
+        N = len(self.clients)
+        B = int(bins.numel())
+        mask = torch.zeros((N, B), dtype=torch.bool, device=self.device)
+        freeze = self.round_id < self.pruning_freeze_rounds
+
+        for i, client in enumerate(self.clients):
+            old_p = float(p_exec[i])
+            keep_j = int(torch.argmin(torch.abs(bins - old_p)).item())
+            # Keep-current action is always feasible.
+            mask[i, keep_j] = True
+            if freeze:
+                continue
+            for j in range(B):
+                if j == keep_j:
+                    continue
+                cand = float(bins[j].item())
+                if self._allow_change(client.id, old_p, cand):
+                    mask[i, j] = True
+            if not bool(mask[i].any()):
+                mask[i, keep_j] = True
+        return mask
 
     def _stabilize_pruning_actions(self, p_proposed, bins=None):
         """
@@ -285,12 +370,14 @@ class Server(object):
     def generate_next_round_params(self):
         # ===== A) 收集指标（这一步对应“执行了上一轮下发动作”） =====
         times, entropies, sizes, do_times = [], [], [], []
+        train_accs = []
         p_exec, E_exec, losses = [], [], []
 
         for client in self.clients:
-            _, total_time, entropy, local_data_size, _, \
+            train_acc, total_time, entropy, local_data_size, _, \
                 client_last_pruning_rate, client_epochs, avg_loss, client_do_time = client.feddra_do()
 
+            train_accs.append(float(train_acc))
             times.append(float(total_time))
             entropies.append(float(entropy))
             sizes.append(int(local_data_size))
@@ -302,6 +389,9 @@ class Server(object):
         N = len(self.clients)
         if N == 0:
             return {}
+        train_acc_mean = float(np.mean(train_accs)) if train_accs else 0.0
+        eval_accs = [float(getattr(c, "last_acc", 0.0)) for c in self.clients]
+        eval_acc_lag = float(np.mean(eval_accs)) if eval_accs else 0.0
 
         total_client_wait_time = self.cal_wait_time(do_times)
         self.client_wait_times.append(total_client_wait_time)
@@ -343,9 +433,64 @@ class Server(object):
             self.ema_latency_score = (1.0 - a) * self.ema_latency_score + a * latency_index
 
         improve = (self.ema_latency_score - latency_index) / max(abs(self.ema_latency_score), 1e-6)
-        R2 = float(np.clip(np.tanh(improve) - np.tanh(0.5 * latency_index), -1.5, 1.0))
-
         avg_loss = sum(losses) / max(len(losses), 1)
+        time_term = float(np.tanh(improve) - np.tanh(0.5 * latency_index))
+
+        # 用 EMA 融合 train/eval 信号，减弱 eval_lag 对 reward 的错配影响。
+        self.train_acc_ema = self._ema_update(self.train_acc_ema, train_acc_mean, self.signal_alpha)
+        if eval_acc_lag > 0.0 or self.eval_acc_ema is not None:
+            self.eval_acc_ema = self._ema_update(self.eval_acc_ema, eval_acc_lag, self.signal_alpha)
+
+        train_signal = float(0.6 * train_acc_mean + 0.4 * self.train_acc_ema)
+        eval_signal = float(0.4 * eval_acc_lag + 0.6 * (self.eval_acc_ema if self.eval_acc_ema is not None else eval_acc_lag))
+
+        if self.prev_train_signal is None:
+            delta_train_acc = 0.0
+        else:
+            delta_train_acc = float(train_signal - self.prev_train_signal)
+
+        if self.prev_eval_signal is None:
+            delta_eval_acc = 0.0
+        else:
+            delta_eval_acc = float(eval_signal - self.prev_eval_signal)
+
+        # progress + generalization gap 抑制，避免 train_acc 虚高误导 R2。
+        gap_pen = float(np.tanh(max(0.0, train_signal - eval_signal) / 8.0))
+        acc_term = float(
+            0.55 * np.tanh(delta_train_acc / 1.5)
+            + 0.45 * np.tanh(delta_eval_acc / 1.0)
+            - 0.15 * gap_pen
+        )
+
+        prev_loss_ema = self.loss_ema
+        self.loss_ema = self._ema_update(self.loss_ema, avg_loss, self.loss_ema_alpha)
+        if prev_loss_ema is None:
+            loss_term = 0.0
+        else:
+            rel_loss_improve = (prev_loss_ema - avg_loss) / max(abs(prev_loss_ema), 1e-6)
+            loss_term = float(np.tanh(rel_loss_improve))
+
+        switch_penalty = float(np.clip(delta_p / max(self.delta_eps, 1e-6), 0.0, 2.0))
+        time_comp = self._normalize_r2_component("time", time_term)
+        acc_comp = self._normalize_r2_component("acc", acc_term)
+        loss_comp = self._normalize_r2_component("loss", loss_term)
+        switch_comp = self._normalize_switch_penalty(switch_penalty)
+        R2_raw = (
+            self.w_r2_latency * time_comp
+            + self.w_r2_acc * acc_comp
+            + self.w_r2_loss * loss_comp
+            - self.w_r2_switch * switch_comp
+        )
+        R2 = float(np.clip(R2_raw, -1.5, 1.0))
+
+        self.prev_train_signal = train_signal
+        if eval_signal > 0.0:
+            self.prev_eval_signal = eval_signal
+        self.prev_train_acc = train_acc_mean
+        if eval_acc_lag > 0.0:
+            self.prev_eval_acc = eval_acc_lag
+        self.prev_avg_loss = avg_loss
+
         self.R1_list.append(R1)
         self.R2_list.append(R2)
         self.loss_list.append(avg_loss)
@@ -355,48 +500,50 @@ class Server(object):
             f"[Round {self.round_id}] timing: time_diff={time_span:.4f}, "
             f"span_ratio={span_ratio:.4f}, prune_ratio={prune_ratio:.4f}, latency_idx={latency_index:.4f}"
         )
+        print(
+            f"[Round {self.round_id}] reward-shaping: train_acc={train_acc_mean:.2f}, eval_acc_lag={eval_acc_lag:.2f}, "
+            f"eval_signal={eval_signal:.2f}, "
+            f"d_train_acc={delta_train_acc:.3f}, d_eval_acc={delta_eval_acc:.3f}, "
+            f"acc_term={acc_term:.4f}, loss_term={loss_term:.4f}, switch_pen={switch_penalty:.4f}, "
+            f"time_comp={time_comp:.4f}, acc_comp={acc_comp:.4f}, loss_comp={loss_comp:.4f}, switch_comp={switch_comp:.4f}, "
+            f"R2_raw={R2_raw:.4f}"
+        )
 
         # ===== D) 规则策略（warmup 用） =====
         p_rule, E_rule = self._rule_policy(times, entropies)
         use_ppo = self.round_id >= self.warmup_rounds
 
         use_bins = getattr(self.agent.cfg.s1, "use_discrete_bins", True)
-        bins = torch.tensor(self.agent.cfg.s1.prune_bins, dtype=torch.float32).cpu() if use_bins else None
+        bins = self.agent.prune_bins.detach().cpu() if use_bins else None
         E_min = int(getattr(self.agent.cfg, "E_min", 1))
         E_max = int(getattr(self.agent.cfg, "E_max", 19))
 
         cur_s1_pack = None
         cur_s2_pack = None
         changed_idx = []
+        overridden_cnt = 0
 
         # ===== E) 从当前状态产生下一轮动作 =====
         if use_ppo:
+            s1_action_mask = self._build_stage1_action_mask(p_exec, self.agent.prune_bins if use_bins else None)
             with torch.no_grad():
-                out1 = self.agent.select_pruning(s1_cur)
+                out1 = self.agent.select_pruning(s1_cur, valid_mask=s1_action_mask)
             p_sampled = out1["p"].squeeze(-1).detach().cpu().numpy().tolist()
 
             p_next, changed_idx = self._stabilize_pruning_actions(p_sampled, bins=bins if use_bins else None)
+            overridden_cnt = int(np.sum(np.abs(np.asarray(p_next, dtype=np.float32) - np.asarray(p_sampled, dtype=np.float32)) > 1e-6))
 
             s2_cur = self._build_s2_state(t_norm, entropies, sizes, p_next)
             with torch.no_grad():
                 out2 = self.agent.select_epochs(s2_cur, k=N, E_min=E_min, E_max=E_max)
             E_next = [int(x) for x in out2["E"].tolist()]
 
-            if self.agent.s1_is_discrete:
-                logits = out1["logits"] / max(float(self.agent.cfg.s1.tau_e), 1e-6)
-                dist = torch.distributions.Categorical(logits=logits)
-                p_tensor = torch.tensor(p_next, dtype=torch.float32, device=self.device)
-                a_exec = torch.argmin(torch.abs(self.agent.prune_bins.unsqueeze(0) - p_tensor.unsqueeze(1)), dim=1)
-                logp_exec = dist.log_prob(a_exec)
-            else:
-                a_exec = out1["a"]
-                logp_exec = out1["logp"]
-
             cur_s1_pack = dict(
                 s=s1_cur.detach(),
-                a=a_exec.detach(),
-                logp=logp_exec.detach(),
+                a=out1["a"].detach(),
+                logp=out1["logp"].detach(),
                 v=out1["v"].detach(),
+                mask=out1.get("mask").detach() if out1.get("mask") is not None else None,
             )
             cur_s2_pack = dict(
                 s=s2_cur.detach(),
@@ -404,6 +551,8 @@ class Server(object):
                 logp=out2["logp"].detach(),
                 v=out2["v"].detach(),
                 budget=int(out2["residual_budget"]),
+                seq=out2.get("seq", None).detach() if out2.get("seq", None) is not None else None,
+                cap=int(out2.get("cap_per_client", max(0, E_max - E_min))),
             )
         else:
             p_next, changed_idx = self._stabilize_pruning_actions(p_rule, bins=bins if use_bins else None)
@@ -420,6 +569,7 @@ class Server(object):
                 r=R1,
                 s_next=s1_cur.detach(),
                 done=0,
+                mask=self._pending_s1.get("mask", None),
             )
         if self._pending_s2 is not None:
             self.agent.store_transition_stage2(
@@ -431,12 +581,15 @@ class Server(object):
                 s_next=s2_cur.detach(),
                 done=0,
                 residual_budget=int(self._pending_s2["budget"]),
+                seq=self._pending_s2.get("seq", None),
+                cap_per_client=int(self._pending_s2.get("cap", max(0, E_max - E_min))),
             )
 
         # ===== G) 下发下一轮动作 =====
         print(
             f"[Round {self.round_id}] pruning-change summary: changed={len(changed_idx)}/{N}, "
-            f"freeze={self.pruning_freeze_rounds}, cooldown={self.cooldown_rounds}, delta_eps={self.delta_eps:.3f}"
+            f"freeze={self.pruning_freeze_rounds}, cooldown={self.cooldown_rounds}, "
+            f"delta_eps={self.delta_eps:.3f}, overridden={overridden_cnt}"
         )
         for i, client in enumerate(self.clients):
             Ei = int(np.clip(int(E_next[i]), E_min, E_max))

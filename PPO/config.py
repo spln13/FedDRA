@@ -14,6 +14,13 @@ class PPOCommonCfg:
     max_grad_norm: float = 0.5
     update_epochs: int = 4
     target_kl: float = 0.03
+    adaptive_kl: bool = True
+    kl_low_ratio: float = 0.35
+    kl_high_ratio: float = 1.5
+    lr_scale_up: float = 1.08
+    lr_scale_down: float = 0.85
+    lr_scale_min: float = 0.4
+    lr_scale_max: float = 3.0
 
 
 @dataclass
