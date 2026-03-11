@@ -23,8 +23,8 @@ class Client(object):
         self.s = s
         self.last_pruning_rate = 0.
         self.cur_pruning_rate = 0.
-        self.training_epochs_for_prune = 8
-        self.finetune_epochs = 4
+        self.training_epochs_for_prune = 6
+        self.finetune_epochs = 3
         self.model = self._build_model(batch_norm=batch_norm)  # client自己的模型
         self.last_acc = 0.
         self.base_dir = base_dir
@@ -51,8 +51,9 @@ class Client(object):
             prune_end_time = time.time()
             prune_time = prune_end_time - prune_start_time
 
-
+        # total_times是用来for PPO决策，client_do_times是用来统计wait_time
         acc, total_time, avg_loss, entropy, local_data_size = self.train()
+        total_time = self.mock_time_delay(total_time)
         self.client_do_times.append(total_time + prune_time)
         self.client_total_do_time += total_time + prune_time
         print("[client{}, round{}] finished training, acc: {:.2f}, time: {:.2f}, avg_loss: {:.6f}, entropy: {:.6f}, "
@@ -154,12 +155,12 @@ class Client(object):
         print(f"[client{self.id}] Predictive entropy: {entropy:.6f}")
 
         # ✅ 本地测试集acc
-        acc = self.local_test(model)
-        print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
+        # acc = self.local_test(model)
+        # print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
 
         self.model = model
         # ✅ 返回 acc、训练时间、平均loss、信息熵、本地数据量Di
-        return acc, total_time, avg_loss, entropy, local_data_size
+        return 0., total_time, avg_loss, entropy, local_data_size
 
     def first_evaluate(self):
         """
@@ -469,7 +470,81 @@ class Client(object):
         total_time = end_time - start_time
         total = self.mock_time_delay(total_time)  # 模拟终端性能差异
         self.client_do_times.append(total)
+        # 与 FedDRA 口径对齐：累计客户端总执行时间，便于在 main.py 统一统计 Total Run Time
+        self.client_total_do_time += total
         return total
+
+
+    def fedprox_do(self, server_state_dict, epochs=None, mu=0.01, lr=0.1, momentum=0.9, weight_decay=0.0):
+        """
+        FedProx 本地训练：min_w  L_i(w) + (μ/2) * ||w - w_t||^2
+        - server_state_dict: 服务端当前模型参数（state_dict()）
+        - epochs: 本地训练轮数（若 None 则用 self.training_intensity，和你现有字段对齐）
+        - mu: FedProx 的 μ 系数
+        返回与 feddra_do 相同的 9 元组，便于 server 侧复用相同的收集/聚合逻辑。
+        """
+        start_all = time.time()
+
+        model = self.model.to(self.device)
+        model.train()
+
+        # 参照你 fedavg_do 的写法：如果你有统一的 get_optimizer，就换成那个
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+
+        local_epochs = int(epochs if epochs is not None else max(1, int(getattr(self, "training_intensity", 1))))
+        train_loader = self.load_train_data()
+
+        # 把 server 参数搬到本地 device，做一次快照（无梯度）
+        server_params = {k: v.detach().to(self.device) for k, v in server_state_dict.items() if k in model.state_dict()}
+
+        loss_meter, step_cnt = 0.0, 0
+        tic = time.time()
+        for ep in range(local_epochs):
+            for x, y in train_loader:
+                x, y = x.to(self.device), y.to(self.device)
+                optimizer.zero_grad()
+                logits = model(x)
+                ce = F.cross_entropy(logits, y)
+
+                # FedProx proximal term： (μ/2) * Σ ||w - w_t||^2
+                prox = 0.0
+                for (name, p) in model.named_parameters():
+                    if name in server_params and p.requires_grad:
+                        prox = prox + (p - server_params[name]).pow(2).sum()
+
+                loss = ce + 0.5 * mu * prox
+                loss.backward()
+                optimizer.step()
+
+                loss_meter += ce.item()  # 记录纯分类损失，和你日志里“avg_loss”口径一致
+                step_cnt += 1
+
+        do_time = time.time() - tic
+        avg_loss = loss_meter / max(step_cnt, 1)
+
+        # 评估 + 指标
+        local_data_size = int(getattr(self, "local_data_size", 0))
+        total_time = time.time() - start_all
+        # time mock一下
+        # 为了与原有日志一致，这两个字段仍然回传
+        client_last_pruning_rate = float(getattr(self, "cur_pruning_rate", 0.0))
+        client_epochs = int(local_epochs)
+
+        print(f"[client{self.id}] Average training loss: {avg_loss:.6f}")
+        print(f"[client{self.id}] Predictive entropy: {entropy:.6f}")
+        print(
+            f"\nclient_id: {self.id}, Test acc: {int(acc / 100.0 * local_data_size)}/{local_data_size} ({acc:.1f}%)\n")
+
+        print(f"[client{self.id} accuracy] accuracy: {acc:.4f}")
+        print(f"[client{self.id}, round{getattr(self, 'round_id', -1)}] "
+              f"finished training, acc: {acc:.2f}, time: {total_time:.2f}, "
+              f"avg_loss: {avg_loss:.6f}, entropy: {entropy:.6f}, "
+              f"local_data_size: {local_data_size}, pruning_rate: {client_last_pruning_rate:.2f}, "
+              f"training_intensity: {client_epochs}, prox_mu: {mu}, prune_time: 0.0")
+
+        return (acc, total_time, entropy, local_data_size, int(self.id),
+                client_last_pruning_rate, client_epochs, avg_loss, do_time)
+
 
     def mock_time_delay(self, total_time):
         # 用于模拟终端之间的性能差异，通过训练时间来反馈
@@ -477,6 +552,6 @@ class Client(object):
             total_time *= 2.
         elif self.id % 4 == 2:  # 2 6
             total_time *= 3.
-        elif self.id % 4 == 3:  # 3 7
+        if self.id % 4 == 3:  # 3 7
             total_time *= 5.
         return total_time

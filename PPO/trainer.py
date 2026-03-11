@@ -2,207 +2,580 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Categorical, Normal
 
-from .config import DualStreamConfig
-from .nets import DualStreamActorCritic
-from .buffer import RolloutBuffer
+from .buffer import PPORolloutBuffer
+from .config import TwoStageConfig
+from .nets import (
+    Stage1ContActor,
+    Stage1Critic,
+    Stage1DiscreteActor,
+    Stage2Actor,
+    Stage2ActorClientwise,
+    Stage2Critic,
+    sample_continuous,
+    sample_discrete,
+)
 
 
-class DualStreamPPO:
-    """
-    训练器封装：
-      - select_actions(): 在线采样动作
-      - store_transition(): 写入缓冲
-      - ppo_update(): 使用缓冲数据进行一次 PPO 更新
-    """
-    def __init__(self, cfg: DualStreamConfig,
-                 device: str = "cuda" if torch.cuda.is_available() else "cpu"):
+class _PPOCore:
+    def __init__(self, actor, critic, cfg, device="cpu"):
+        self.actor = actor.to(device)
+        self.critic = critic.to(device)
         self.cfg = cfg
         self.device = device
-        self.net = DualStreamActorCritic(cfg).to(device)
-        self.opt = torch.optim.Adam(self.net.parameters(), lr=cfg.lr)
-        self.buffer = RolloutBuffer()
+        self.opt = torch.optim.Adam(
+            list(actor.parameters()) + list(critic.parameters()),
+            lr=cfg.lr,
+        )
 
-    # ---------- 外部接口 ----------
+    def _compute_adv(self, r, v, v_next, done):
+        """
+        r, v, v_next, done: [T, *tail]
+        return: adv, ret with same shape as v
+        """
+        r = r.float()
+        v = v.float()
+        v_next = v_next.float()
+        done = done.float()
+        T = r.shape[0]
+        tail_shape = tuple(v.shape[1:])
+
+        adv = torch.zeros((T,) + tail_shape, device=r.device, dtype=r.dtype)
+        gae = torch.zeros(tail_shape, device=r.device, dtype=r.dtype)
+
+        gamma, lam = self.cfg.gamma, self.cfg.gae_lambda
+        with torch.no_grad():
+            for t in reversed(range(T)):
+                delta_t = r[t] + gamma * (1.0 - done[t]) * v_next[t] - v[t]
+                gae = delta_t + gamma * lam * (1.0 - done[t]) * gae
+                adv[t] = gae
+
+            ret = adv + v
+            flat = adv.reshape(T, -1)
+            flat = (flat - flat.mean()) / (flat.std() + 1e-8)
+            adv = flat.reshape_as(adv)
+        return adv, ret
+
+    def update_discrete(self, traj, temperature=1.0):
+        cfg = self.cfg
+        s = traj["s"]
+        a = traj["a"].long()
+        logp_old = traj["logp"].float()
+        v_old = traj["v"]
+        r = traj["r"]
+        s_next = traj["s_next"]
+        done = traj["done"]
+
+        with torch.no_grad():
+            v_next = self.critic(s_next)
+        adv, ret = self._compute_adv(r, v_old, v_next, done)
+
+        logits = self.actor(s)
+        if "mask" in traj:
+            mask = traj["mask"].bool()
+            # Keep policy update consistent with action sampling-time feasible set.
+            logits = logits.masked_fill(~mask, -1e9)
+        dist = Categorical(logits=logits / max(float(temperature), 1e-6))
+        logp = dist.log_prob(a)
+        logp_old = logp_old.view_as(logp)
+        ratio = (logp - logp_old).exp()
+
+        adv_term = adv.squeeze(-1)
+        if adv_term.dim() < ratio.dim():
+            adv_term = adv_term.expand_as(ratio)
+        surr1 = ratio * adv_term
+        surr2 = torch.clamp(ratio, 1 - cfg.clip_coef, 1 + cfg.clip_coef) * adv_term
+        actor_loss = -torch.min(surr1, surr2).mean() - cfg.ent_coef * dist.entropy().mean()
+
+        v = self.critic(s)
+        critic_loss = F.mse_loss(v, ret)
+
+        loss = actor_loss + cfg.vf_coef * critic_loss
+        self.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(
+            list(self.actor.parameters()) + list(self.critic.parameters()),
+            cfg.max_grad_norm,
+        )
+        self.opt.step()
+
+        approx_kl = (logp_old - logp).mean().clamp_min(0.0)
+        return dict(
+            loss=loss.item(),
+            actor=actor_loss.item(),
+            critic=critic_loss.item(),
+            kl=approx_kl.item(),
+        )
+
+    def update_continuous(self, traj, p_min, p_max):
+        cfg = self.cfg
+        s = traj["s"]
+        a = traj["a"]
+        logp_old = traj["logp"].float()
+        v_old = traj["v"]
+        r = traj["r"]
+        s_next = traj["s_next"]
+        done = traj["done"]
+
+        with torch.no_grad():
+            v_next = self.critic(s_next)
+        adv, ret = self._compute_adv(r, v_old, v_next, done)
+
+        mu, std = self.actor(s)
+        y = (a - p_min) / (p_max - p_min) * 2 - 1
+        y = y.clamp(-0.999999, 0.999999)
+        x = 0.5 * (torch.log1p(y) - torch.log1p(-y))
+        dist = Normal(mu, std)
+        logp = dist.log_prob(x) - torch.log(1 - y.pow(2) + 1e-8)
+        logp = logp.sum(dim=-1)
+        logp_old = logp_old.view_as(logp)
+
+        ratio = (logp - logp_old).exp()
+        adv_term = adv.squeeze(-1)
+        if adv_term.dim() < ratio.dim():
+            adv_term = adv_term.expand_as(ratio)
+        surr1 = ratio * adv_term
+        surr2 = torch.clamp(ratio, 1 - cfg.clip_coef, 1 + cfg.clip_coef) * adv_term
+        actor_loss = -torch.min(surr1, surr2).mean() - cfg.ent_coef * dist.entropy().sum(dim=-1).mean()
+
+        v = self.critic(s)
+        critic_loss = F.mse_loss(v, ret)
+
+        loss = actor_loss + cfg.vf_coef * critic_loss
+        self.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(
+            list(self.actor.parameters()) + list(self.critic.parameters()),
+            cfg.max_grad_norm,
+        )
+        self.opt.step()
+
+        approx_kl = (logp_old - logp).mean().clamp_min(0.0)
+        return dict(
+            loss=loss.item(),
+            actor=actor_loss.item(),
+            critic=critic_loss.item(),
+            kl=approx_kl.item(),
+        )
+
+
+class TwoStagePPO:
+    """
+    PPO1: pruning-rate policy (per-client action).
+    PPO2: epoch-allocation policy (multinomial allocation over clients).
+    """
+
+    def __init__(self, cfg: TwoStageConfig):
+        self.cfg = cfg
+        dev = cfg.device
+
+        # PPO1
+        if cfg.s1.use_discrete_bins:
+            self.s1_actor = Stage1DiscreteActor(cfg.s1.s1_dim, len(cfg.s1.prune_bins))
+            self.s1_is_discrete = True
+        else:
+            self.s1_actor = Stage1ContActor(cfg.s1.s1_dim)
+            self.s1_is_discrete = False
+        self.s1_critic = Stage1Critic(cfg.s1.s1_dim)
+        self.ppo1 = _PPOCore(self.s1_actor, self.s1_critic, cfg.common, device=dev)
+
+        # PPO2
+        self.s2_use_clientwise = bool(getattr(cfg.s2, "use_clientwise", False))
+        self.k_max = 256
+        if self.s2_use_clientwise:
+            self.s2_actor = Stage2ActorClientwise(in_dim=cfg.s2.s2_dim, hidden=128)
+        else:
+            self.s2_actor = Stage2Actor(cfg.s2.s2_dim, k_max=self.k_max)
+        self.s2_critic = Stage2Critic(cfg.s2.s2_dim)
+        self.ppo2 = _PPOCore(self.s2_actor, self.s2_critic, cfg.common, device=dev)
+
+        self.buf1 = PPORolloutBuffer(device=dev)
+        self.buf2 = PPORolloutBuffer(device=dev)
+
+        self.device = dev
+        self.prune_bins = torch.tensor(cfg.s1.prune_bins, dtype=torch.float32, device=dev)
+        self._s1_lr_scale = 1.0
+        self._s2_lr_scale = 1.0
+
+    # ---------------- stage1 ----------------
+    @torch.no_grad()
+    def select_pruning(self, s1_batch, valid_mask=None):
+        s1 = s1_batch.to(self.device).float()
+        v = self.s1_critic(s1)
+        if self.s1_is_discrete:
+            logits = self.s1_actor(s1)
+            mask = None
+            if valid_mask is not None:
+                mask = valid_mask.to(self.device).bool()
+                logits = logits.masked_fill(~mask, -1e9)
+            a, logp, _, _ = sample_discrete(logits, tau=self.cfg.s1.tau_e)
+            p = self.prune_bins[a].unsqueeze(-1)
+            return dict(p=p, a=a, logp=logp, v=v, logits=logits, mask=mask)
+        mu, std = self.s1_actor(s1)
+        p, logp, _, _ = sample_continuous(mu, std, self.cfg.s1.p_min, self.cfg.s1.p_max)
+        return dict(p=p, a=p, logp=logp, v=v, logits=None, mask=None)
+
+    # ---------------- stage2 helpers ----------------
+    def _s2_actor_logits(self, s2_state, k):
+        if self.s2_use_clientwise:
+            logits = self.s2_actor(s2_state)
+            if logits.shape[-1] < k:
+                raise ValueError(f"stage2 logits has {logits.shape[-1]} dims, but k={k}")
+            return logits[..., :k]
+        return self.s2_actor(s2_state, k)
+
+    def _s2_critic_input(self, s2_state):
+        if not self.s2_use_clientwise:
+            return s2_state
+        if s2_state.dim() == 2:  # [N, d]
+            return s2_state.mean(dim=0, keepdim=True)  # [1, d]
+        if s2_state.dim() == 3:  # [T, N, d]
+            return s2_state.mean(dim=1)  # [T, d]
+        raise ValueError(f"Unsupported stage2 state shape: {tuple(s2_state.shape)}")
+
+    def _s2_value(self, s2_state):
+        return self.s2_critic(self._s2_critic_input(s2_state))
+
+    @staticmethod
+    def _stage2_budget(k, e_min, e_max, tau_total):
+        tau_total = max(int(tau_total), int(k) * int(e_min))
+        residual_budget = max(0, tau_total - int(k) * int(e_min))
+        cap_per_client = max(0, int(e_max) - int(e_min))
+        max_residual = int(k) * cap_per_client
+        residual_budget = min(residual_budget, max_residual)
+        return residual_budget, cap_per_client
+
+    @staticmethod
+    def _repair_counts(counts, probs, budget, cap_per_client):
+        counts = counts.clone().long()
+        if budget <= 0 or cap_per_client <= 0:
+            return torch.zeros_like(counts)
+
+        counts = counts.clamp(min=0, max=cap_per_client)
+        diff = int(budget - int(counts.sum().item()))
+        if diff == 0:
+            return counts
+
+        if diff > 0:
+            order = torch.argsort(probs, descending=True).tolist()
+            for idx in order:
+                if diff <= 0:
+                    break
+                room = cap_per_client - int(counts[idx].item())
+                if room <= 0:
+                    continue
+                step = min(room, diff)
+                counts[idx] += step
+                diff -= step
+        else:
+            order = torch.argsort(probs, descending=False).tolist()
+            need = -diff
+            for idx in order:
+                if need <= 0:
+                    break
+                can_drop = int(counts[idx].item())
+                if can_drop <= 0:
+                    continue
+                step = min(can_drop, need)
+                counts[idx] -= step
+                need -= step
+        return counts
+
+    @staticmethod
+    def _sample_budget_sequence(logits_1d, budget, cap_per_client):
+        """
+        Autoregressive allocation:
+        sample one unit at a time with capacity mask, so no post-hoc repair is needed.
+        Returns counts, sequence indices and summed log-prob.
+        """
+        k = int(logits_1d.numel())
+        counts = torch.zeros(k, device=logits_1d.device, dtype=torch.long)
+        seq = []
+        logp_sum = torch.zeros((), device=logits_1d.device)
+
+        if budget <= 0:
+            return counts, torch.empty(0, device=logits_1d.device, dtype=torch.long), logp_sum
+
+        for _ in range(int(budget)):
+            mask = counts < int(cap_per_client)
+            if not bool(mask.any()):
+                break
+            step_logits = logits_1d.masked_fill(~mask, -1e9)
+            dist = Categorical(logits=step_logits)
+            idx = dist.sample()
+            logp_sum = logp_sum + dist.log_prob(idx)
+            counts[idx] += 1
+            seq.append(idx)
+
+        if len(seq) == 0:
+            seq_tensor = torch.empty(0, device=logits_1d.device, dtype=torch.long)
+        else:
+            seq_tensor = torch.stack(seq, dim=0).long()
+        return counts, seq_tensor, logp_sum
+
+    # ---------------- stage2 ----------------
+    @torch.no_grad()
+    def select_epochs(self, s2_state, k=None, E_min=None, E_max=None):
+        s2 = s2_state.to(self.device).float()
+        if k is None:
+            if self.s2_use_clientwise and s2.dim() == 2:
+                k = int(s2.shape[0])
+            else:
+                raise ValueError("k is required when stage2 input is not [N, d].")
+
+        e_min = int(self.cfg.E_min if E_min is None else E_min)
+        e_max = int(self.cfg.E_max if E_max is None else E_max)
+        if e_max < e_min:
+            e_max = e_min
+
+        v = self._s2_value(s2)
+        logits = self._s2_actor_logits(s2, k) / max(float(self.cfg.s2.tau_e), 1e-6)
+        if logits.dim() != 2 or logits.shape[0] != 1:
+            raise ValueError(f"select_epochs expects actor logits [1, k], got {tuple(logits.shape)}")
+
+        probs = torch.softmax(logits, dim=-1).squeeze(0)  # [k]
+        residual_budget, cap_per_client = self._stage2_budget(k, e_min, e_max, self.cfg.s2.tau_total)
+
+        if residual_budget <= 0:
+            counts = torch.zeros(k, device=self.device, dtype=torch.long)
+            logp = torch.zeros((), device=self.device)
+            seq = torch.empty(0, device=self.device, dtype=torch.long)
+        else:
+            counts, seq, logp = self._sample_budget_sequence(
+                logits_1d=logits.squeeze(0),
+                budget=int(residual_budget),
+                cap_per_client=int(cap_per_client),
+            )
+
+        E = counts + e_min
+        return dict(
+            E=E.long(),
+            a=counts.long(),
+            seq=seq.long(),
+            logp=logp,
+            v=v,
+            probs=probs,
+            logits=logits.squeeze(0),
+            residual_budget=int(residual_budget),
+            cap_per_client=int(cap_per_client),
+        )
 
     @torch.no_grad()
-    def select_actions(self, S_glob, S_cli, mask=None, prev_p: torch.Tensor = None):
-        """
-        采样动作，并对剪枝率 p 做稳定化（可选）：
-          - 惯性（EMA）
-          - 滞回（小改动则保持不变）
-          - 分桶（量化到若干固定值）
-        Args:
-          S_glob: [B, d_glob]
-          S_cli : [B, N, d_cli]
-          mask  : [B, N]
-          prev_p: [B, N, 1] 或 None —— 上一轮已执行/下发的剪枝率；不传则与原始行为一致
-        Returns:
-          dict(p, E, logp, entropy)
-        """
-        S_glob = S_glob.to(self.device)
-        S_cli = S_cli.to(self.device)
-        mask = mask.to(self.device) if mask is not None else None
+    def select_epochs_per_client(self, S2_cli, g=None, E_min=None, E_max=None, aggregate="default"):
+        del g, aggregate
+        return self.select_epochs(S2_cli, k=int(S2_cli.shape[0]), E_min=E_min, E_max=E_max)
 
-        out = self.net.select_actions(S_glob, S_cli, mask)  # 原始采样
-        p_raw = out["p"]  # [B,N,1]
-
-        # ---------- 稳定化开始（仅在提供 prev_p 时生效） ----------
-        p_smooth = p_raw
-        if prev_p is not None:
-            prev_p = prev_p.to(self.device)
-
-            # 1) 惯性（EMA）
-            alpha = float(self.cfg.inertia_alpha)
-            p_smooth = alpha * p_raw + (1.0 - alpha) * prev_p
-
-            # 2) 滞回（小于阈值的不变）
-            eps = float(self.cfg.hysteresis_eps)
-            stay = (p_smooth - prev_p).abs() < eps
-            p_smooth = torch.where(stay, prev_p, p_smooth)
-
-        # 3) 分桶量化（可选）
-        K = int(getattr(self.cfg, "bucket_bins", 0) or 0)
-        if K > 1:
-            L, H = float(self.cfg.p_low), float(self.cfg.p_high)
-            step = (H - L) / (K - 1)
-            idx = torch.round((p_smooth - L) / (step + 1e-8)).clamp(0, K - 1)
-            p_smooth = idx * step + L
-
-        out["p"] = p_smooth.clamp(self.cfg.p_low, self.cfg.p_high)
-        return out
-
-    def store_transition(self, transition: dict):
-        """
-        transition 至少应包含：
-          S_glob, S_cli, mask, p, E, logp, V, reward, done
-        """
-        item = {k: v.to(self.device) for k, v in transition.items()}
-        self.buffer.add(item)
-
-    def ppo_update(self, epochs: int = 4, batch_size: int = 64, normalize_adv: bool = True):
-        """
-        使用缓冲区收集的 on-policy 数据进行一次 PPO 更新（加入稳态改造）
-        """
-        # 1) GAE / returns
-        self.buffer.compute_gae_and_returns(self.cfg.gamma, self.cfg.gae_lambda)
-
-        # 2) 打包
-        S_glob = self.buffer.cat("S_glob")  # [T*B, d_glob]
-        S_cli = self.buffer.cat("S_cli")  # [T*B, N, d_cli]
-        mask = self.buffer.cat("mask") if "mask" in self.buffer.data[0] else None
-        p = self.buffer.cat("p")  # [T*B, N, 1]
-        E = self.buffer.cat("E")  # [T*B, N, 1]
-        logp_old = self.buffer.cat("logp")  # [T*B, N]
-        V_old = self.buffer.cat("V")  # [T*B, N, 1]
-        R = self.buffer.returns.reshape(-1, *V_old.shape[1:])  # [T*B,N,1]
-        A = (R - V_old).detach()
-
-        if normalize_adv:
-            mean, std = A.mean(), A.std().clamp_min(1e-6)
-            A = (A - mean) / std
-
-        TB, N, _ = V_old.shape
-
-        # 展平工具
-        def flat(x):
-            s = x.shape
-            if len(s) == 3:  # [TB,N,D]
-                return x.reshape(TB * N, s[-1])
-            elif len(s) == 2:  # [TB,N]
-                return x.reshape(TB * N)
-            else:  # [TB,N,1]
-                return x.reshape(TB * N, 1)
-
-        S_glob_rep = S_glob.unsqueeze(1).expand(TB, N, -1).reshape(TB * N, -1)
-        S_cli_eval = S_cli  # evaluate 时再按需 reshape
-
-        p_f = flat(p)
-        E_f = flat(E).long()
-        logp_old_f = flat(logp_old)
-        R_f = flat(R)
-        A_f = flat(A)
-
+    # ---------------- buffers ----------------
+    def store_transition_stage1(self, s, a, logp, v, r, s_next, done, mask=None):
+        rec = dict(
+            s=s,
+            a=a,
+            logp=logp,
+            v=v,
+            r=torch.tensor([r], device=self.device),
+            s_next=s_next,
+            done=torch.tensor([done], device=self.device),
+        )
         if mask is not None:
-            mask_f = flat(mask)
-            valid_idx = (mask_f > 0.5).nonzero(as_tuple=False).squeeze(-1)
-        else:
-            valid_idx = torch.arange(TB * N, device=self.device)
+            rec["mask"] = mask
+        self.buf1.add(**rec)
 
-        # 3) 小批次多 epoch 训练（加入优势裁剪、Huber value、KL 早停与监控）
-        target_kl = getattr(self.cfg, "target_kl", 0.03)
-        last_approx_kl = torch.tensor(0.0, device=self.device)
-        last_clipfrac = torch.tensor(0.0, device=self.device)
+    def store_transition_stage2(self, s, a, logp, v, r, s_next, done, residual_budget, seq=None, cap_per_client=None):
+        a_tensor = a if torch.is_tensor(a) else torch.as_tensor(a, device=self.device)
+        logp_tensor = logp if torch.is_tensor(logp) else torch.as_tensor(logp, device=self.device)
+        k_tensor = torch.tensor([int(a_tensor.numel())], device=self.device, dtype=torch.long)
+        budget_tensor = torch.tensor([int(residual_budget)], device=self.device, dtype=torch.long)
+        if cap_per_client is None:
+            cap_per_client = int(max(0, self.cfg.E_max - self.cfg.E_min))
+        cap_tensor = torch.tensor([int(cap_per_client)], device=self.device, dtype=torch.long)
 
-        for _ in range(epochs):
-            perm = valid_idx[torch.randperm(valid_idx.numel(), device=self.device)]
-            # 若上一个 epoch 已经 KL 超阈（极端情况），直接提前停
-            if last_approx_kl > target_kl:
+        seq_pad_len = int(max(0, self.cfg.s2.tau_total))
+        seq_pad = torch.full((seq_pad_len,), -1, device=self.device, dtype=torch.long)
+        seq_len = 0
+        if seq is not None:
+            seq_tensor = seq if torch.is_tensor(seq) else torch.as_tensor(seq, device=self.device)
+            seq_tensor = seq_tensor.long().view(-1)
+            seq_len = int(min(seq_tensor.numel(), seq_pad_len))
+            if seq_len > 0:
+                seq_pad[:seq_len] = seq_tensor[:seq_len]
+        seq_len_tensor = torch.tensor([seq_len], device=self.device, dtype=torch.long)
+
+        self.buf2.add(
+            s=s,
+            a=a_tensor.long(),
+            logp=logp_tensor.float(),
+            v=v,
+            r=torch.tensor([r], device=self.device),
+            s_next=s_next,
+            done=torch.tensor([done], device=self.device),
+            k=k_tensor,
+            budget=budget_tensor,
+            cap=cap_tensor,
+            seq=seq_pad,
+            seq_len=seq_len_tensor,
+        )
+
+    def store_transition_stage2_per_client(self, S2_cli, r_vec, g=None, done=0):
+        del g
+        out = self.select_epochs_per_client(S2_cli, E_min=self.cfg.E_min, E_max=self.cfg.E_max)
+        r_vec = torch.as_tensor(r_vec, device=self.device).float().view(-1)
+        r_scalar = float(r_vec.mean().item())
+        self.store_transition_stage2(
+            s=S2_cli,
+            a=out["a"],
+            logp=out["logp"],
+            v=out["v"],
+            r=r_scalar,
+            s_next=S2_cli,
+            done=done,
+            residual_budget=out["residual_budget"],
+            seq=out.get("seq", None),
+            cap_per_client=out.get("cap_per_client", None),
+        )
+
+    def _adaptive_kl_lr(self, core, observed_kl, stage="s1"):
+        cfg = self.cfg.common
+        if not getattr(cfg, "adaptive_kl", True):
+            return 1.0
+
+        target = max(float(cfg.target_kl), 1e-6)
+        low = float(getattr(cfg, "kl_low_ratio", 0.35)) * target
+        high = float(getattr(cfg, "kl_high_ratio", 1.5)) * target
+        up = float(getattr(cfg, "lr_scale_up", 1.08))
+        down = float(getattr(cfg, "lr_scale_down", 0.85))
+        s_min = float(getattr(cfg, "lr_scale_min", 0.4))
+        s_max = float(getattr(cfg, "lr_scale_max", 3.0))
+
+        attr = "_s1_lr_scale" if stage == "s1" else "_s2_lr_scale"
+        scale = float(getattr(self, attr, 1.0))
+        kl = float(observed_kl)
+        if kl < low:
+            scale *= up
+        elif kl > high:
+            scale *= down
+        scale = float(max(s_min, min(s_max, scale)))
+        setattr(self, attr, scale)
+
+        base_lr = float(cfg.lr)
+        for pg in core.opt.param_groups:
+            pg["lr"] = base_lr * scale
+        return scale
+
+    # ---------------- updates ----------------
+    def ppo_update_stage1(self):
+        if len(self.buf1) == 0:
+            return {}
+        traj = self.buf1.stack()
+        outs = {}
+        for _ in range(self.cfg.common.update_epochs):
+            if self.s1_is_discrete:
+                out = self.ppo1.update_discrete(traj, temperature=self.cfg.s1.tau_e)
+            else:
+                out = self.ppo1.update_continuous(traj, self.cfg.s1.p_min, self.cfg.s1.p_max)
+            lr_scale = self._adaptive_kl_lr(self.ppo1, out["kl"], stage="s1")
+            out["lr"] = float(self.cfg.common.lr) * lr_scale
+            out["lr_scale"] = float(lr_scale)
+            outs = out
+            if out["kl"] > self.cfg.common.target_kl:
                 break
+        self.buf1.clear()
+        return outs
 
-            for i in range(0, perm.numel(), batch_size):
-                idx = perm[i:i + batch_size]
+    def _ppo_update_stage2_once(self, traj):
+        s = traj["s"].float()
+        T = s.shape[0]
+        logp_old = traj["logp"].float().view(T)
+        v_old = traj["v"].float().view(T, -1)[:, :1]
+        r = traj["r"].float().view(T, 1)
+        s_next = traj["s_next"].float()
+        done = traj["done"].float().view(T, 1)
 
-                Sg_b = S_glob_rep[idx]
-                Sci_b = S_cli_eval.reshape(TB * N, -1)[idx].unsqueeze(1)  # [B,1,d_cli]
-                mask_b = torch.ones((idx.numel(), 1), device=self.device)
+        required = ("k", "budget", "cap", "seq", "seq_len")
+        if any(key not in traj for key in required):
+            raise RuntimeError("Stage2 buffer must contain 'k', 'budget', 'cap', 'seq', 'seq_len'.")
+        k = int(traj["k"][0].item())
 
-                p_b = p_f[idx]
-                E_b = E_f[idx].unsqueeze(-1)
-                logp_old_b = logp_old_f[idx]
-                R_b = R_f[idx]
-                A_b = A_f[idx].clamp(-10.0, 10.0)  # ← 新增：优势裁剪
+        with torch.no_grad():
+            v_next = self._s2_value(s_next).view(T, 1)
+        adv, ret = self.ppo2._compute_adv(r, v_old, v_next, done)
 
-                out = self.net.evaluate_actions(Sg_b, Sci_b, p_b.unsqueeze(1), E_b, mask_b)
-                logp_new = out["logp"].squeeze(-1)
-                entropy = out["entropy"].squeeze(-1)
-                V = out["V"].squeeze(-1)
+        logits = self._s2_actor_logits(s, k) / max(float(self.cfg.s2.tau_e), 1e-6)
+        seq = traj["seq"].long()           # [T, L]
+        seq_len = traj["seq_len"].long().view(T)
+        cap_vec = traj["cap"].long().view(T)
+        budget_vec = traj["budget"].long().view(T)
 
-                ratio = torch.exp(logp_new - logp_old_b)
-                surr1 = ratio * A_b.squeeze(-1)
-                surr2 = torch.clamp(ratio, 1 - self.cfg.clip_eps, 1 + self.cfg.clip_eps) * A_b.squeeze(-1)
-                loss_pi = -torch.min(surr1, surr2).mean()
+        logp = torch.zeros_like(logp_old)
+        entropy = torch.zeros_like(logp_old)
 
-                # value-clip + Huber（替换原 MSE）
-                V_old_b = V.detach()
-                V_clipped = V_old_b + (V - V_old_b).clamp(-self.cfg.clip_eps, self.cfg.clip_eps)
-                target = R_b.squeeze(-1)
-                loss_v1 = torch.nn.functional.smooth_l1_loss(V, target, reduction="none")
-                loss_v2 = torch.nn.functional.smooth_l1_loss(V_clipped, target, reduction="none")
-                loss_v = 0.5 * torch.max(loss_v1, loss_v2).mean()
+        for t in range(T):
+            steps = int(min(seq_len[t].item(), budget_vec[t].item()))
+            if steps <= 0:
+                continue
+            cap_t = int(cap_vec[t].item())
+            counts = torch.zeros(k, device=self.device, dtype=torch.long)
+            ent_sum = torch.zeros((), device=self.device)
+            for step in range(steps):
+                idx = int(seq[t, step].item())
+                if idx < 0:
+                    break
+                mask = counts < cap_t
+                if not bool(mask.any()):
+                    break
+                step_logits = logits[t].masked_fill(~mask, -1e9)
+                dist = Categorical(logits=step_logits)
+                idx_tensor = torch.tensor(idx, dtype=torch.long, device=self.device)
+                logp[t] = logp[t] + dist.log_prob(idx_tensor)
+                ent_sum = ent_sum + dist.entropy()
+                counts[idx] += 1
+            entropy[t] = ent_sum / max(steps, 1)
 
-                loss_ent = -entropy.mean()
+        ratio = (logp - logp_old).exp()
 
-                # 可选 KL 惩罚（保留）
-                loss_kl = torch.tensor(0.0, device=self.device)
-                if self.cfg.kl_coef > 0:
-                    with torch.no_grad():
-                        kl = (logp_old_b - logp_new).mean()
-                    loss_kl = self.cfg.kl_coef * kl
+        adv_term = adv.squeeze(-1)
+        if adv_term.dim() > 1:
+            adv_term = adv_term.mean(dim=-1)
 
-                loss = loss_pi + self.cfg.vf_coef * loss_v + self.cfg.ent_coef * (-loss_ent) + loss_kl
+        if int(seq_len.max().item()) <= 0:
+            actor_loss = torch.zeros((), device=self.device)
+        else:
+            surr1 = ratio * adv_term
+            surr2 = torch.clamp(ratio, 1 - self.cfg.common.clip_coef, 1 + self.cfg.common.clip_coef) * adv_term
+            actor_loss = -torch.min(surr1, surr2).mean() - self.cfg.common.ent_coef * entropy.mean()
 
-                self.opt.zero_grad(set_to_none=True)
-                loss.backward()
-                nn.utils.clip_grad_norm_(self.net.parameters(), self.cfg.max_grad_norm)
-                self.opt.step()
+        v = self._s2_value(s).view(T, 1)
+        critic_loss = F.mse_loss(v, ret)
 
-                # —— 监控 + KL 早停 ——（步后统计）
-                with torch.no_grad():
-                    approx_kl = (logp_old_b - logp_new).mean()
-                    clipfrac = ((ratio - 1.0).abs() > self.cfg.clip_eps).float().mean()
-                    last_approx_kl = approx_kl
-                    last_clipfrac = clipfrac
+        loss = actor_loss + self.cfg.common.vf_coef * critic_loss
+        self.ppo2.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(
+            list(self.s2_actor.parameters()) + list(self.s2_critic.parameters()),
+            self.cfg.common.max_grad_norm,
+        )
+        self.ppo2.opt.step()
 
-                if approx_kl > target_kl:
-                    # 触发早停，并温和降低学习率一档（避免下一轮继续炸）
-                    for g in self.opt.param_groups:
-                        g['lr'] = max(g['lr'] * 0.5, 1e-6)
-                    break  # 跳出该 epoch 的剩余 batch
+        approx_kl = (logp_old - logp).mean().clamp_min(0.0).item()
+        return dict(
+            loss=loss.item(),
+            actor=actor_loss.item(),
+            critic=critic_loss.item(),
+            kl=approx_kl,
+        )
 
-        # 4) 清空缓冲
-        self.buffer.clear()
+    def ppo_update_stage2(self):
+        if len(self.buf2) == 0:
+            return {}
+        traj = self.buf2.stack()
+        outs = {}
+        for _ in range(self.cfg.common.update_epochs):
+            out = self._ppo_update_stage2_once(traj)
+            outs = out
+            if out["kl"] > self.cfg.common.target_kl:
+                break
+        self.buf2.clear()
+        return outs
 
-        # 可选：打印监控
-        print(f"[PPO] KL={last_approx_kl.item():.4f} clipfrac={last_clipfrac.item():.3f}")
-
+    def ppo_update_stage2_per_client(self):
+        return self.ppo_update_stage2()
