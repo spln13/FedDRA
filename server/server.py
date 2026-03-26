@@ -16,14 +16,20 @@ from PPO import TwoStageConfig, TwoStagePPO
 class Server(object):
     def __init__(self, device, clients, dataset, model_name='MiniVGG',
                  prune_bins=(0., 0.1, 0.2, 0.3, 0.4), E_min=1, E_max=5, hidden=256, batch_norm=True,
-                 warmup_rounds=10):
+                 warmup_rounds=10, ablations=None):
         self.device = device  # 'cpu' or 'cuda'
         self.clients = clients  # list of Client objects
-        self.dataset = dataset  # string
+        self.dataset = str(dataset).strip().lower()  # string
         self.round_id = 0
         self.init_models_save_path = './init_models/'
         self.model_name = model_name
-        self.server_model = MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
+        self.ablations = dict(ablations or {})
+        self.disable_reward_norm = bool(self.ablations.get("reward_norm", False))
+        self.disable_eval_smoothing = bool(self.ablations.get("eval_smoothing", False))
+        self.disable_adaptive_kl = bool(self.ablations.get("adaptive_kl", False))
+        self.disable_action_mask = bool(self.ablations.get("action_mask", False))
+        self.disable_prune_stability = bool(self.ablations.get("prune_stability", False))
+        self.server_model = self._init_server_model(batch_norm=batch_norm)
         self.prev_acc = 0.0  # 上一轮全局模型精度
 
         # ==== Two-Stage PPO 初始化 ====
@@ -49,6 +55,8 @@ class Server(object):
         self.ppo_config.common.clip_coef = 0.2
         self.ppo_config.common.gae_lambda = 0.95
         self.ppo_config.common.target_kl = 0.02
+        if self.disable_adaptive_kl:
+            self.ppo_config.common.adaptive_kl = False
 
         # 创建两阶段 PPO 管理器
         self.agent = TwoStagePPO(self.ppo_config)
@@ -138,7 +146,7 @@ class Server(object):
         self.norm_ci = _EmaNorm(0.05)  # （可选）每轮平均耗时 c_i = T_i / E_i，用于 E 成本
 
         # R2 分项归一化，提升 reward 尺度稳定性并减少项间“抢权重”。
-        self.r2_use_term_norm = getattr(self, "r2_use_term_norm", True)
+        self.r2_use_term_norm = bool(getattr(self, "r2_use_term_norm", True) and (not self.disable_reward_norm))
         self.r2_norm_alpha = getattr(self, "r2_norm_alpha", 0.08)
         self.r2_term_clip = getattr(self, "r2_term_clip", 3.0)
         self.r2_time_norm = _EmaNorm(self.r2_norm_alpha)
@@ -151,6 +159,8 @@ class Server(object):
         self.ema_acc = 0.0
         self.best_acc = 0.0
         # ======================================================
+        if any(self.ablations.values()):
+            print(f"[Ablation Config] {self.ablations}")
 
     @staticmethod
     def _ema_update(old_value, new_value, alpha):
@@ -183,11 +193,12 @@ class Server(object):
         return float(np.clip(p / scale, 0.0, self.r2_term_clip))
 
     def _init_server_model(self, batch_norm=True):
-        if self.model_name == 'MiniVGG':
+        key = str(self.model_name).strip().lower()
+        if key in ("minivgg", "mini_vgg"):
             return MiniVGG(dataset=self.dataset, batch_norm=batch_norm)
-        if self.model_name == 'MnistNet':
-            return MNISTNet()
-        raise NotImplementedError
+        if key in ("mnistnet", "mnist_net"):
+            return MNISTNet(dataset=self.dataset, batch_norm=batch_norm)
+        raise NotImplementedError(f"Unsupported model_name: {self.model_name}")
 
     def _rule_policy(self, times, entropies):
         N = len(times)
@@ -294,6 +305,12 @@ class Server(object):
         """
         N = len(self.clients)
         old_ps = [float(getattr(c, "cur_pruning_rate", p_proposed[i])) for i, c in enumerate(self.clients)]
+        if self.disable_prune_stability:
+            final_ps = [self._normalize_candidate_p(p, bins=bins) for p in p_proposed]
+            changed = [i for i in range(N) if abs(final_ps[i] - old_ps[i]) > 1e-8]
+            for idx in changed:
+                self._mark_changed(self.clients[idx].id)
+            return final_ps, changed
         if self.round_id < self.pruning_freeze_rounds:
             return old_ps, []
 
@@ -437,12 +454,17 @@ class Server(object):
         time_term = float(np.tanh(improve) - np.tanh(0.5 * latency_index))
 
         # 用 EMA 融合 train/eval 信号，减弱 eval_lag 对 reward 的错配影响。
-        self.train_acc_ema = self._ema_update(self.train_acc_ema, train_acc_mean, self.signal_alpha)
-        if eval_acc_lag > 0.0 or self.eval_acc_ema is not None:
-            self.eval_acc_ema = self._ema_update(self.eval_acc_ema, eval_acc_lag, self.signal_alpha)
+        # ablation: --disable_eval_smoothing 时关闭平滑，直接使用原始 train/eval。
+        if self.disable_eval_smoothing:
+            train_signal = float(train_acc_mean)
+            eval_signal = float(eval_acc_lag)
+        else:
+            self.train_acc_ema = self._ema_update(self.train_acc_ema, train_acc_mean, self.signal_alpha)
+            if eval_acc_lag > 0.0 or self.eval_acc_ema is not None:
+                self.eval_acc_ema = self._ema_update(self.eval_acc_ema, eval_acc_lag, self.signal_alpha)
 
-        train_signal = float(0.6 * train_acc_mean + 0.4 * self.train_acc_ema)
-        eval_signal = float(0.4 * eval_acc_lag + 0.6 * (self.eval_acc_ema if self.eval_acc_ema is not None else eval_acc_lag))
+            train_signal = float(0.6 * train_acc_mean + 0.4 * self.train_acc_ema)
+            eval_signal = float(0.4 * eval_acc_lag + 0.6 * (self.eval_acc_ema if self.eval_acc_ema is not None else eval_acc_lag))
 
         if self.prev_train_signal is None:
             delta_train_acc = 0.0
@@ -525,7 +547,10 @@ class Server(object):
 
         # ===== E) 从当前状态产生下一轮动作 =====
         if use_ppo:
-            s1_action_mask = self._build_stage1_action_mask(p_exec, self.agent.prune_bins if use_bins else None)
+            if self.disable_action_mask:
+                s1_action_mask = None
+            else:
+                s1_action_mask = self._build_stage1_action_mask(p_exec, self.agent.prune_bins if use_bins else None)
             with torch.no_grad():
                 out1 = self.agent.select_pruning(s1_cur, valid_mask=s1_action_mask)
             p_sampled = out1["p"].squeeze(-1).detach().cpu().numpy().tolist()
@@ -634,7 +659,7 @@ class Server(object):
             client_mask = client_model.mask
             ratio = 1. / len(self.clients)  # ratio 为 1 / n
             layer_idx_in_mask = 0
-            if self.dataset == 'MNIST' or self.dataset == 'emnist_noniid':
+            if self.dataset in ('mnist', 'emnist_noniid'):
                 start_mask_client = torch.ones(1).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
             else:
                 start_mask_client = torch.ones(3).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
@@ -678,7 +703,7 @@ class Server(object):
             client_model = client_models[i]
             client_mask = client_model.mask
             layer_idx_in_mask = 0
-            if self.dataset == 'MNIST' or self.dataset == 'emnist_noniid':
+            if self.dataset in ('mnist', 'emnist_noniid'):
                 start_mask_client = torch.ones(1).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
             else:
                 start_mask_client = torch.ones(3).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
@@ -798,8 +823,7 @@ class Server(object):
         server_state = {k: v.detach().cpu() for k, v in self.server_model.state_dict().items()}
 
         client_states = []
-        times = []
-        do_times = []
+        client_times = []
 
 
         # 本地训练
@@ -808,9 +832,8 @@ class Server(object):
             ret = client.fedprox_do(server_state, epochs=local_epochs, mu=mu,
                                     lr=lr, momentum=momentum, weight_decay=weight_decay)
             # ret 同 feddra_do 的 9 元组
-            _, total_time, _, _, _, _, _, avg_loss, do_time = ret
-            times.append(float(total_time))
-            do_times.append(float(do_time))
+            _, total_time, _, _, _, _, _, _, _ = ret
+            client_times.append(float(total_time))
 
             client_states.append({k: v.detach().cpu() for k, v in client.model.state_dict().items()})
 
@@ -818,9 +841,10 @@ class Server(object):
         self.fedprox_aggregate(client_states, weights=None)
 
         # 统计等待时间（和你现有的 cal_wait_time 保持一致）
-        total_client_wait_time = self.cal_wait_time(do_times)
+        total_client_wait_time = self.cal_wait_time(client_times)
         self.client_wait_times.append(total_client_wait_time)
-
+        if client_times:
+            self.round_time_diff.append(max(client_times) - min(client_times))
         self.total_run_time += (time.time() - start)
 
     def cal_wait_time(self, total_time):

@@ -10,7 +10,7 @@ mini_vgg_cfg = [32, 'M', 64, 'M', 128, 128]
 class MiniVGG(nn.Module):
     def __init__(self, cfg=None, num_classes=10, dataset='cifar10', batch_norm=True, init_weights=True):
         super(MiniVGG, self).__init__()
-        self.dataset = dataset
+        self.dataset = str(dataset).strip().lower()
         self.mask = None
         if cfg is None:
             cfg = mini_vgg_cfg
@@ -25,7 +25,7 @@ class MiniVGG(nn.Module):
 
     def make_layers(self, cfg, batch_norm=True):
         layers = []
-        if self.dataset == 'MNIST' or self.dataset == 'emnist_noniid':
+        if self.dataset in ('mnist', 'emnist_noniid'):
             in_channels = 1
         else:
             in_channels = 3  # CIFAR-10 是 RGB 三通道
@@ -35,7 +35,7 @@ class MiniVGG(nn.Module):
             else:
                 # v 是通道数量
                 if i == len(cfg) - 1:
-                    if self.dataset == "MNIST" or self.dataset == 'emnist_noniid':
+                    if self.dataset in ('mnist', 'emnist_noniid'):
                         conv2d = nn.Conv2d(in_channels, cfg[-1], kernel_size=7)  # mnist前一个层的输出是7x7
                     else:
                         conv2d = nn.Conv2d(in_channels, cfg[-1], kernel_size=8)  # 假设前一个层的输出是8x8
