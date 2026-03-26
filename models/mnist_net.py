@@ -16,7 +16,7 @@ class MNISTNet(nn.Module):
             cfg = cnn_cfg
         self.cfg = cfg
         self.name = 'mnistnet'
-        self.dataset = dataset
+        self.dataset = str(dataset).strip().lower()
         self.features = self.make_layers(cfg, batch_norm=batch_norm)
         self.classifier = nn.Linear(self.cfg[-1], num_classes)
         if init_weights:

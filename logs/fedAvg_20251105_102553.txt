@@ -1,0 +1,6447 @@
+nohup: ignoring input
+Running FedAvg...
+fedAvg Start Training...
+--- FL Round 0 ---
+
+client_id: 0, Test acc: 235/939 (25.0%)
+
+
+client_id: 1, Test acc: 95/1318 (7.2%)
+
+
+client_id: 2, Test acc: 1/1016 (0.1%)
+
+
+client_id: 3, Test acc: 0/952 (0.0%)
+
+
+client_id: 4, Test acc: 130/1017 (12.8%)
+
+
+client_id: 5, Test acc: 74/870 (8.5%)
+
+
+client_id: 6, Test acc: 68/974 (7.0%)
+
+
+client_id: 7, Test acc: 32/1100 (2.9%)
+
+
+client_id: 8, Test acc: 235/942 (24.9%)
+
+
+client_id: 9, Test acc: 130/872 (14.9%)
+
+Round 0 Test Acc: 10.34%
+--- FL Round 1 ---
+
+client_id: 0, Test acc: 403/939 (42.9%)
+
+
+client_id: 1, Test acc: 237/1318 (18.0%)
+
+
+client_id: 2, Test acc: 42/1016 (4.1%)
+
+
+client_id: 3, Test acc: 63/952 (6.6%)
+
+
+client_id: 4, Test acc: 248/1017 (24.4%)
+
+
+client_id: 5, Test acc: 208/870 (23.9%)
+
+
+client_id: 6, Test acc: 156/974 (16.0%)
+
+
+client_id: 7, Test acc: 241/1100 (21.9%)
+
+
+client_id: 8, Test acc: 369/942 (39.2%)
+
+
+client_id: 9, Test acc: 356/872 (40.8%)
+
+Round 1 Test Acc: 23.79%
+--- FL Round 2 ---
+
+client_id: 0, Test acc: 475/939 (50.6%)
+
+
+client_id: 1, Test acc: 484/1318 (36.7%)
+
+
+client_id: 2, Test acc: 243/1016 (23.9%)
+
+
+client_id: 3, Test acc: 176/952 (18.5%)
+
+
+client_id: 4, Test acc: 310/1017 (30.5%)
+
+
+client_id: 5, Test acc: 380/870 (43.7%)
+
+
+client_id: 6, Test acc: 499/974 (51.2%)
+
+
+client_id: 7, Test acc: 464/1100 (42.2%)
+
+
+client_id: 8, Test acc: 453/942 (48.1%)
+
+
+client_id: 9, Test acc: 556/872 (63.8%)
+
+Round 2 Test Acc: 40.91%
+--- FL Round 3 ---
+
+client_id: 0, Test acc: 499/939 (53.1%)
+
+
+client_id: 1, Test acc: 573/1318 (43.5%)
+
+
+client_id: 2, Test acc: 298/1016 (29.3%)
+
+
+client_id: 3, Test acc: 264/952 (27.7%)
+
+
+client_id: 4, Test acc: 378/1017 (37.2%)
+
+
+client_id: 5, Test acc: 449/870 (51.6%)
+
+
+client_id: 6, Test acc: 531/974 (54.5%)
+
+
+client_id: 7, Test acc: 571/1100 (51.9%)
+
+
+client_id: 8, Test acc: 519/942 (55.1%)
+
+
+client_id: 9, Test acc: 571/872 (65.5%)
+
+Round 3 Test Acc: 46.95%
+--- FL Round 4 ---
+
+client_id: 0, Test acc: 548/939 (58.4%)
+
+
+client_id: 1, Test acc: 656/1318 (49.8%)
+
+
+client_id: 2, Test acc: 386/1016 (38.0%)
+
+
+client_id: 3, Test acc: 311/952 (32.7%)
+
+
+client_id: 4, Test acc: 433/1017 (42.6%)
+
+
+client_id: 5, Test acc: 508/870 (58.4%)
+
+
+client_id: 6, Test acc: 635/974 (65.2%)
+
+
+client_id: 7, Test acc: 615/1100 (55.9%)
+
+
+client_id: 8, Test acc: 553/942 (58.7%)
+
+
+client_id: 9, Test acc: 597/872 (68.5%)
+
+Round 4 Test Acc: 52.80%
+--- FL Round 5 ---
+
+client_id: 0, Test acc: 585/939 (62.3%)
+
+
+client_id: 1, Test acc: 726/1318 (55.1%)
+
+
+client_id: 2, Test acc: 427/1016 (42.0%)
+
+
+client_id: 3, Test acc: 369/952 (38.8%)
+
+
+client_id: 4, Test acc: 477/1017 (46.9%)
+
+
+client_id: 5, Test acc: 541/870 (62.2%)
+
+
+client_id: 6, Test acc: 684/974 (70.2%)
+
+
+client_id: 7, Test acc: 659/1100 (59.9%)
+
+
+client_id: 8, Test acc: 586/942 (62.2%)
+
+
+client_id: 9, Test acc: 618/872 (70.9%)
+
+Round 5 Test Acc: 57.05%
+--- FL Round 6 ---
+
+client_id: 0, Test acc: 624/939 (66.5%)
+
+
+client_id: 1, Test acc: 788/1318 (59.8%)
+
+
+client_id: 2, Test acc: 467/1016 (46.0%)
+
+
+client_id: 3, Test acc: 426/952 (44.7%)
+
+
+client_id: 4, Test acc: 510/1017 (50.1%)
+
+
+client_id: 5, Test acc: 569/870 (65.4%)
+
+
+client_id: 6, Test acc: 702/974 (72.1%)
+
+
+client_id: 7, Test acc: 701/1100 (63.7%)
+
+
+client_id: 8, Test acc: 609/942 (64.6%)
+
+
+client_id: 9, Test acc: 636/872 (72.9%)
+
+Round 6 Test Acc: 60.59%
+--- FL Round 7 ---
+
+client_id: 0, Test acc: 647/939 (68.9%)
+
+
+client_id: 1, Test acc: 864/1318 (65.6%)
+
+
+client_id: 2, Test acc: 506/1016 (49.8%)
+
+
+client_id: 3, Test acc: 462/952 (48.5%)
+
+
+client_id: 4, Test acc: 521/1017 (51.2%)
+
+
+client_id: 5, Test acc: 591/870 (67.9%)
+
+
+client_id: 6, Test acc: 739/974 (75.9%)
+
+
+client_id: 7, Test acc: 720/1100 (65.5%)
+
+
+client_id: 8, Test acc: 623/942 (66.1%)
+
+
+client_id: 9, Test acc: 650/872 (74.5%)
+
+Round 7 Test Acc: 63.40%
+--- FL Round 8 ---
+
+client_id: 0, Test acc: 656/939 (69.9%)
+
+
+client_id: 1, Test acc: 879/1318 (66.7%)
+
+
+client_id: 2, Test acc: 524/1016 (51.6%)
+
+
+client_id: 3, Test acc: 484/952 (50.8%)
+
+
+client_id: 4, Test acc: 554/1017 (54.5%)
+
+
+client_id: 5, Test acc: 613/870 (70.5%)
+
+
+client_id: 6, Test acc: 747/974 (76.7%)
+
+
+client_id: 7, Test acc: 744/1100 (67.6%)
+
+
+client_id: 8, Test acc: 632/942 (67.1%)
+
+
+client_id: 9, Test acc: 651/872 (74.7%)
+
+Round 8 Test Acc: 65.00%
+--- FL Round 9 ---
+
+client_id: 0, Test acc: 661/939 (70.4%)
+
+
+client_id: 1, Test acc: 890/1318 (67.5%)
+
+
+client_id: 2, Test acc: 537/1016 (52.9%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 573/1017 (56.3%)
+
+
+client_id: 5, Test acc: 625/870 (71.8%)
+
+
+client_id: 6, Test acc: 750/974 (77.0%)
+
+
+client_id: 7, Test acc: 762/1100 (69.3%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 9 Test Acc: 66.34%
+--- FL Round 10 ---
+
+client_id: 0, Test acc: 669/939 (71.2%)
+
+
+client_id: 1, Test acc: 910/1318 (69.0%)
+
+
+client_id: 2, Test acc: 557/1016 (54.8%)
+
+
+client_id: 3, Test acc: 510/952 (53.6%)
+
+
+client_id: 4, Test acc: 581/1017 (57.1%)
+
+
+client_id: 5, Test acc: 628/870 (72.2%)
+
+
+client_id: 6, Test acc: 755/974 (77.5%)
+
+
+client_id: 7, Test acc: 760/1100 (69.1%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 10 Test Acc: 67.08%
+--- FL Round 11 ---
+
+client_id: 0, Test acc: 671/939 (71.5%)
+
+
+client_id: 1, Test acc: 926/1318 (70.3%)
+
+
+client_id: 2, Test acc: 583/1016 (57.4%)
+
+
+client_id: 3, Test acc: 513/952 (53.9%)
+
+
+client_id: 4, Test acc: 606/1017 (59.6%)
+
+
+client_id: 5, Test acc: 644/870 (74.0%)
+
+
+client_id: 6, Test acc: 753/974 (77.3%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 665/942 (70.6%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 11 Test Acc: 68.13%
+--- FL Round 12 ---
+
+client_id: 0, Test acc: 665/939 (70.8%)
+
+
+client_id: 1, Test acc: 914/1318 (69.3%)
+
+
+client_id: 2, Test acc: 579/1016 (57.0%)
+
+
+client_id: 3, Test acc: 499/952 (52.4%)
+
+
+client_id: 4, Test acc: 603/1017 (59.3%)
+
+
+client_id: 5, Test acc: 646/870 (74.3%)
+
+
+client_id: 6, Test acc: 761/974 (78.1%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 674/942 (71.5%)
+
+
+client_id: 9, Test acc: 677/872 (77.6%)
+
+Round 12 Test Acc: 68.05%
+--- FL Round 13 ---
+
+client_id: 0, Test acc: 675/939 (71.9%)
+
+
+client_id: 1, Test acc: 933/1318 (70.8%)
+
+
+client_id: 2, Test acc: 594/1016 (58.5%)
+
+
+client_id: 3, Test acc: 506/952 (53.2%)
+
+
+client_id: 4, Test acc: 610/1017 (60.0%)
+
+
+client_id: 5, Test acc: 645/870 (74.1%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 678/872 (77.8%)
+
+Round 13 Test Acc: 68.45%
+--- FL Round 14 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 918/1318 (69.7%)
+
+
+client_id: 2, Test acc: 588/1016 (57.9%)
+
+
+client_id: 3, Test acc: 526/952 (55.3%)
+
+
+client_id: 4, Test acc: 608/1017 (59.8%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 678/942 (72.0%)
+
+
+client_id: 9, Test acc: 676/872 (77.5%)
+
+Round 14 Test Acc: 68.78%
+--- FL Round 15 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 940/1318 (71.3%)
+
+
+client_id: 2, Test acc: 611/1016 (60.1%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 618/1017 (60.8%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 673/942 (71.4%)
+
+
+client_id: 9, Test acc: 676/872 (77.5%)
+
+Round 15 Test Acc: 68.86%
+--- FL Round 16 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 939/1318 (71.2%)
+
+
+client_id: 2, Test acc: 602/1016 (59.3%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 611/1017 (60.1%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 760/1100 (69.1%)
+
+
+client_id: 8, Test acc: 669/942 (71.0%)
+
+
+client_id: 9, Test acc: 676/872 (77.5%)
+
+Round 16 Test Acc: 68.85%
+--- FL Round 17 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 931/1318 (70.6%)
+
+
+client_id: 2, Test acc: 603/1016 (59.4%)
+
+
+client_id: 3, Test acc: 518/952 (54.4%)
+
+
+client_id: 4, Test acc: 624/1017 (61.4%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 763/974 (78.3%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 671/942 (71.2%)
+
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Round 17 Test Acc: 69.07%
+--- FL Round 18 ---
+
+client_id: 0, Test acc: 672/939 (71.6%)
+
+
+client_id: 1, Test acc: 933/1318 (70.8%)
+
+
+client_id: 2, Test acc: 613/1016 (60.3%)
+
+
+client_id: 3, Test acc: 496/952 (52.1%)
+
+
+client_id: 4, Test acc: 622/1017 (61.2%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 763/1100 (69.4%)
+
+
+client_id: 8, Test acc: 670/942 (71.1%)
+
+
+client_id: 9, Test acc: 677/872 (77.6%)
+
+Round 18 Test Acc: 69.03%
+--- FL Round 19 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 937/1318 (71.1%)
+
+
+client_id: 2, Test acc: 612/1016 (60.2%)
+
+
+client_id: 3, Test acc: 509/952 (53.5%)
+
+
+client_id: 4, Test acc: 628/1017 (61.8%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 675/942 (71.7%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 19 Test Acc: 69.29%
+--- FL Round 20 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 949/1318 (72.0%)
+
+
+client_id: 2, Test acc: 621/1016 (61.1%)
+
+
+client_id: 3, Test acc: 490/952 (51.5%)
+
+
+client_id: 4, Test acc: 627/1017 (61.7%)
+
+
+client_id: 5, Test acc: 666/870 (76.6%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 674/942 (71.5%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 20 Test Acc: 69.37%
+--- FL Round 21 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 943/1318 (71.5%)
+
+
+client_id: 2, Test acc: 619/1016 (60.9%)
+
+
+client_id: 3, Test acc: 529/952 (55.6%)
+
+
+client_id: 4, Test acc: 622/1017 (61.2%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 670/942 (71.1%)
+
+
+client_id: 9, Test acc: 678/872 (77.8%)
+
+Round 21 Test Acc: 69.53%
+--- FL Round 22 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 620/1016 (61.0%)
+
+
+client_id: 3, Test acc: 502/952 (52.7%)
+
+
+client_id: 4, Test acc: 615/1017 (60.5%)
+
+
+client_id: 5, Test acc: 647/870 (74.4%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 677/942 (71.9%)
+
+
+client_id: 9, Test acc: 675/872 (77.4%)
+
+Round 22 Test Acc: 69.22%
+--- FL Round 23 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 601/1016 (59.2%)
+
+
+client_id: 3, Test acc: 514/952 (54.0%)
+
+
+client_id: 4, Test acc: 607/1017 (59.7%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 784/974 (80.5%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 23 Test Acc: 69.20%
+--- FL Round 24 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 623/1016 (61.3%)
+
+
+client_id: 3, Test acc: 512/952 (53.8%)
+
+
+client_id: 4, Test acc: 615/1017 (60.5%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 667/942 (70.8%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 24 Test Acc: 69.34%
+--- FL Round 25 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 619/1016 (60.9%)
+
+
+client_id: 3, Test acc: 516/952 (54.2%)
+
+
+client_id: 4, Test acc: 617/1017 (60.7%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 778/974 (79.9%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 25 Test Acc: 69.56%
+--- FL Round 26 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 938/1318 (71.2%)
+
+
+client_id: 2, Test acc: 615/1016 (60.5%)
+
+
+client_id: 3, Test acc: 527/952 (55.4%)
+
+
+client_id: 4, Test acc: 634/1017 (62.3%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 669/942 (71.0%)
+
+
+client_id: 9, Test acc: 677/872 (77.6%)
+
+Round 26 Test Acc: 69.46%
+--- FL Round 27 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 955/1318 (72.5%)
+
+
+client_id: 2, Test acc: 642/1016 (63.2%)
+
+
+client_id: 3, Test acc: 508/952 (53.4%)
+
+
+client_id: 4, Test acc: 635/1017 (62.4%)
+
+
+client_id: 5, Test acc: 666/870 (76.6%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 27 Test Acc: 69.52%
+--- FL Round 28 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 951/1318 (72.2%)
+
+
+client_id: 2, Test acc: 609/1016 (59.9%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 622/1017 (61.2%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 28 Test Acc: 69.53%
+--- FL Round 29 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 955/1318 (72.5%)
+
+
+client_id: 2, Test acc: 629/1016 (61.9%)
+
+
+client_id: 3, Test acc: 492/952 (51.7%)
+
+
+client_id: 4, Test acc: 637/1017 (62.6%)
+
+
+client_id: 5, Test acc: 675/870 (77.6%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 763/1100 (69.4%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 29 Test Acc: 69.47%
+--- FL Round 30 ---
+
+client_id: 0, Test acc: 698/939 (74.3%)
+
+
+client_id: 1, Test acc: 945/1318 (71.7%)
+
+
+client_id: 2, Test acc: 595/1016 (58.6%)
+
+
+client_id: 3, Test acc: 534/952 (56.1%)
+
+
+client_id: 4, Test acc: 607/1017 (59.7%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 669/942 (71.0%)
+
+
+client_id: 9, Test acc: 677/872 (77.6%)
+
+Round 30 Test Acc: 69.37%
+--- FL Round 31 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 950/1318 (72.1%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 493/952 (51.8%)
+
+
+client_id: 4, Test acc: 634/1017 (62.3%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 785/974 (80.6%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Round 31 Test Acc: 69.44%
+--- FL Round 32 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 638/1016 (62.8%)
+
+
+client_id: 3, Test acc: 511/952 (53.7%)
+
+
+client_id: 4, Test acc: 629/1017 (61.8%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 765/1100 (69.5%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 32 Test Acc: 69.57%
+--- FL Round 33 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 955/1318 (72.5%)
+
+
+client_id: 2, Test acc: 608/1016 (59.8%)
+
+
+client_id: 3, Test acc: 525/952 (55.1%)
+
+
+client_id: 4, Test acc: 624/1017 (61.4%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 665/942 (70.6%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 33 Test Acc: 69.44%
+--- FL Round 34 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 641/1016 (63.1%)
+
+
+client_id: 3, Test acc: 494/952 (51.9%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 787/974 (80.8%)
+
+
+client_id: 7, Test acc: 759/1100 (69.0%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 34 Test Acc: 69.74%
+--- FL Round 35 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 950/1318 (72.1%)
+
+
+client_id: 2, Test acc: 599/1016 (59.0%)
+
+
+client_id: 3, Test acc: 529/952 (55.6%)
+
+
+client_id: 4, Test acc: 614/1017 (60.4%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 677/942 (71.9%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 35 Test Acc: 69.29%
+--- FL Round 36 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 628/1016 (61.8%)
+
+
+client_id: 3, Test acc: 518/952 (54.4%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 36 Test Acc: 69.53%
+--- FL Round 37 ---
+
+client_id: 0, Test acc: 690/939 (73.5%)
+
+
+client_id: 1, Test acc: 968/1318 (73.4%)
+
+
+client_id: 2, Test acc: 605/1016 (59.5%)
+
+
+client_id: 3, Test acc: 517/952 (54.3%)
+
+
+client_id: 4, Test acc: 611/1017 (60.1%)
+
+
+client_id: 5, Test acc: 645/870 (74.1%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 670/942 (71.1%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 37 Test Acc: 69.28%
+--- FL Round 38 ---
+
+client_id: 0, Test acc: 693/939 (73.8%)
+
+
+client_id: 1, Test acc: 954/1318 (72.4%)
+
+
+client_id: 2, Test acc: 633/1016 (62.3%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 631/1017 (62.0%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 781/974 (80.2%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 666/942 (70.7%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 38 Test Acc: 69.63%
+--- FL Round 39 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 615/1016 (60.5%)
+
+
+client_id: 3, Test acc: 528/952 (55.5%)
+
+
+client_id: 4, Test acc: 623/1017 (61.3%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 39 Test Acc: 69.41%
+--- FL Round 40 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 947/1318 (71.9%)
+
+
+client_id: 2, Test acc: 619/1016 (60.9%)
+
+
+client_id: 3, Test acc: 522/952 (54.8%)
+
+
+client_id: 4, Test acc: 629/1017 (61.8%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 765/1100 (69.5%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 40 Test Acc: 69.47%
+--- FL Round 41 ---
+
+client_id: 0, Test acc: 690/939 (73.5%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 510/952 (53.6%)
+
+
+client_id: 4, Test acc: 630/1017 (61.9%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 782/974 (80.3%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 41 Test Acc: 69.72%
+--- FL Round 42 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 629/1016 (61.9%)
+
+
+client_id: 3, Test acc: 516/952 (54.2%)
+
+
+client_id: 4, Test acc: 623/1017 (61.3%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 782/974 (80.3%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 42 Test Acc: 69.65%
+--- FL Round 43 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 623/1016 (61.3%)
+
+
+client_id: 3, Test acc: 509/952 (53.5%)
+
+
+client_id: 4, Test acc: 627/1017 (61.7%)
+
+
+client_id: 5, Test acc: 667/870 (76.7%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 761/1100 (69.2%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 43 Test Acc: 69.48%
+--- FL Round 44 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 632/1016 (62.2%)
+
+
+client_id: 3, Test acc: 519/952 (54.5%)
+
+
+client_id: 4, Test acc: 624/1017 (61.4%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 44 Test Acc: 69.44%
+--- FL Round 45 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 518/952 (54.4%)
+
+
+client_id: 4, Test acc: 633/1017 (62.2%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 783/974 (80.4%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 45 Test Acc: 69.53%
+--- FL Round 46 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 625/1016 (61.5%)
+
+
+client_id: 3, Test acc: 516/952 (54.2%)
+
+
+client_id: 4, Test acc: 626/1017 (61.6%)
+
+
+client_id: 5, Test acc: 649/870 (74.6%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 46 Test Acc: 69.22%
+--- FL Round 47 ---
+
+client_id: 0, Test acc: 694/939 (73.9%)
+
+
+client_id: 1, Test acc: 952/1318 (72.2%)
+
+
+client_id: 2, Test acc: 614/1016 (60.4%)
+
+
+client_id: 3, Test acc: 527/952 (55.4%)
+
+
+client_id: 4, Test acc: 633/1017 (62.2%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 47 Test Acc: 69.53%
+--- FL Round 48 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 641/1016 (63.1%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 48 Test Acc: 69.46%
+--- FL Round 49 ---
+
+client_id: 0, Test acc: 690/939 (73.5%)
+
+
+client_id: 1, Test acc: 949/1318 (72.0%)
+
+
+client_id: 2, Test acc: 621/1016 (61.1%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 637/1017 (62.6%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 49 Test Acc: 69.48%
+--- FL Round 50 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 639/1016 (62.9%)
+
+
+client_id: 3, Test acc: 514/952 (54.0%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 50 Test Acc: 69.59%
+--- FL Round 51 ---
+
+client_id: 0, Test acc: 685/939 (72.9%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 629/1016 (61.9%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 632/1017 (62.1%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 781/974 (80.2%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 645/942 (68.5%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 51 Test Acc: 69.35%
+--- FL Round 52 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 955/1318 (72.5%)
+
+
+client_id: 2, Test acc: 625/1016 (61.5%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 52 Test Acc: 69.58%
+--- FL Round 53 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 949/1318 (72.0%)
+
+
+client_id: 2, Test acc: 632/1016 (62.2%)
+
+
+client_id: 3, Test acc: 528/952 (55.5%)
+
+
+client_id: 4, Test acc: 639/1017 (62.8%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 642/942 (68.2%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 53 Test Acc: 69.60%
+--- FL Round 54 ---
+
+client_id: 0, Test acc: 690/939 (73.5%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 638/1016 (62.8%)
+
+
+client_id: 3, Test acc: 520/952 (54.6%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 784/974 (80.5%)
+
+
+client_id: 7, Test acc: 759/1100 (69.0%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 54 Test Acc: 69.72%
+--- FL Round 55 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 962/1318 (73.0%)
+
+
+client_id: 2, Test acc: 627/1016 (61.7%)
+
+
+client_id: 3, Test acc: 519/952 (54.5%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 782/974 (80.3%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Round 55 Test Acc: 69.60%
+--- FL Round 56 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 624/1016 (61.4%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 635/1017 (62.4%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 56 Test Acc: 69.62%
+--- FL Round 57 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 633/1017 (62.2%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 57 Test Acc: 69.66%
+--- FL Round 58 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 605/1016 (59.5%)
+
+
+client_id: 3, Test acc: 536/952 (56.3%)
+
+
+client_id: 4, Test acc: 623/1017 (61.3%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 58 Test Acc: 69.48%
+--- FL Round 59 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 636/1016 (62.6%)
+
+
+client_id: 3, Test acc: 504/952 (52.9%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 777/974 (79.8%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 59 Test Acc: 69.50%
+--- FL Round 60 ---
+
+client_id: 0, Test acc: 675/939 (71.9%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 525/952 (55.1%)
+
+
+client_id: 4, Test acc: 629/1017 (61.8%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 60 Test Acc: 69.51%
+--- FL Round 61 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 953/1318 (72.3%)
+
+
+client_id: 2, Test acc: 637/1016 (62.7%)
+
+
+client_id: 3, Test acc: 528/952 (55.5%)
+
+
+client_id: 4, Test acc: 633/1017 (62.2%)
+
+
+client_id: 5, Test acc: 648/870 (74.5%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 650/942 (69.0%)
+
+
+client_id: 9, Test acc: 678/872 (77.8%)
+
+Round 61 Test Acc: 69.50%
+--- FL Round 62 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 952/1318 (72.2%)
+
+
+client_id: 2, Test acc: 626/1016 (61.6%)
+
+
+client_id: 3, Test acc: 519/952 (54.5%)
+
+
+client_id: 4, Test acc: 634/1017 (62.3%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 62 Test Acc: 69.31%
+--- FL Round 63 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 636/1016 (62.6%)
+
+
+client_id: 3, Test acc: 513/952 (53.9%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 63 Test Acc: 69.36%
+--- FL Round 64 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 640/1016 (63.0%)
+
+
+client_id: 3, Test acc: 505/952 (53.0%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 64 Test Acc: 69.57%
+--- FL Round 65 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 939/1318 (71.2%)
+
+
+client_id: 2, Test acc: 622/1016 (61.2%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 637/1017 (62.6%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 65 Test Acc: 69.35%
+--- FL Round 66 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 631/1016 (62.1%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 640/1017 (62.9%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 66 Test Acc: 69.50%
+--- FL Round 67 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 947/1318 (71.9%)
+
+
+client_id: 2, Test acc: 623/1016 (61.3%)
+
+
+client_id: 3, Test acc: 532/952 (55.9%)
+
+
+client_id: 4, Test acc: 639/1017 (62.8%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 67 Test Acc: 69.47%
+--- FL Round 68 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 632/1016 (62.2%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 628/1017 (61.8%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 68 Test Acc: 69.38%
+--- FL Round 69 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 944/1318 (71.6%)
+
+
+client_id: 2, Test acc: 625/1016 (61.5%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 630/1017 (61.9%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 69 Test Acc: 69.47%
+--- FL Round 70 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 947/1318 (71.9%)
+
+
+client_id: 2, Test acc: 637/1016 (62.7%)
+
+
+client_id: 3, Test acc: 527/952 (55.4%)
+
+
+client_id: 4, Test acc: 632/1017 (62.1%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 765/1100 (69.5%)
+
+
+client_id: 8, Test acc: 650/942 (69.0%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 70 Test Acc: 69.30%
+--- FL Round 71 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 634/1016 (62.4%)
+
+
+client_id: 3, Test acc: 518/952 (54.4%)
+
+
+client_id: 4, Test acc: 635/1017 (62.4%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 761/1100 (69.2%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 71 Test Acc: 69.38%
+--- FL Round 72 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 945/1318 (71.7%)
+
+
+client_id: 2, Test acc: 639/1016 (62.9%)
+
+
+client_id: 3, Test acc: 519/952 (54.5%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 761/1100 (69.2%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 72 Test Acc: 69.45%
+--- FL Round 73 ---
+
+client_id: 0, Test acc: 672/939 (71.6%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 633/1016 (62.3%)
+
+
+client_id: 3, Test acc: 529/952 (55.6%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 648/870 (74.5%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 73 Test Acc: 69.45%
+--- FL Round 74 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 952/1318 (72.2%)
+
+
+client_id: 2, Test acc: 642/1016 (63.2%)
+
+
+client_id: 3, Test acc: 518/952 (54.4%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 644/942 (68.4%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 74 Test Acc: 69.47%
+--- FL Round 75 ---
+
+client_id: 0, Test acc: 672/939 (71.6%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 541/952 (56.8%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 642/942 (68.2%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 75 Test Acc: 69.47%
+--- FL Round 76 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 643/1016 (63.3%)
+
+
+client_id: 3, Test acc: 510/952 (53.6%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 649/870 (74.6%)
+
+
+client_id: 6, Test acc: 782/974 (80.3%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 642/942 (68.2%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 76 Test Acc: 69.51%
+--- FL Round 77 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 952/1318 (72.2%)
+
+
+client_id: 2, Test acc: 630/1016 (62.0%)
+
+
+client_id: 3, Test acc: 530/952 (55.7%)
+
+
+client_id: 4, Test acc: 633/1017 (62.2%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 77 Test Acc: 69.42%
+--- FL Round 78 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 643/1016 (63.3%)
+
+
+client_id: 3, Test acc: 531/952 (55.8%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 763/974 (78.3%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 78 Test Acc: 69.67%
+--- FL Round 79 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 955/1318 (72.5%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 524/952 (55.0%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 645/942 (68.5%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 79 Test Acc: 69.64%
+--- FL Round 80 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 633/1016 (62.3%)
+
+
+client_id: 3, Test acc: 547/952 (57.5%)
+
+
+client_id: 4, Test acc: 630/1017 (61.9%)
+
+
+client_id: 5, Test acc: 643/870 (73.9%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 779/1100 (70.8%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 80 Test Acc: 69.72%
+--- FL Round 81 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 980/1318 (74.4%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 516/952 (54.2%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 782/974 (80.3%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 81 Test Acc: 69.89%
+--- FL Round 82 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 649/1016 (63.9%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 82 Test Acc: 69.90%
+--- FL Round 83 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 644/1016 (63.4%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 635/1017 (62.4%)
+
+
+client_id: 5, Test acc: 649/870 (74.6%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 83 Test Acc: 69.74%
+--- FL Round 84 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 660/1016 (65.0%)
+
+
+client_id: 3, Test acc: 525/952 (55.1%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 84 Test Acc: 70.02%
+--- FL Round 85 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 643/1016 (63.3%)
+
+
+client_id: 3, Test acc: 554/952 (58.2%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 647/870 (74.4%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 85 Test Acc: 69.93%
+--- FL Round 86 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 650/1016 (64.0%)
+
+
+client_id: 3, Test acc: 532/952 (55.9%)
+
+
+client_id: 4, Test acc: 639/1017 (62.8%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 86 Test Acc: 69.90%
+--- FL Round 87 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 760/1100 (69.1%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 87 Test Acc: 69.82%
+--- FL Round 88 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 639/1016 (62.9%)
+
+
+client_id: 3, Test acc: 537/952 (56.4%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 88 Test Acc: 69.69%
+--- FL Round 89 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 522/952 (54.8%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 763/1100 (69.4%)
+
+
+client_id: 8, Test acc: 650/942 (69.0%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 89 Test Acc: 69.80%
+--- FL Round 90 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 526/952 (55.3%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 90 Test Acc: 69.95%
+--- FL Round 91 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 962/1318 (73.0%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 530/952 (55.7%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 91 Test Acc: 69.75%
+--- FL Round 92 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 652/1016 (64.2%)
+
+
+client_id: 3, Test acc: 531/952 (55.8%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 778/974 (79.9%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 92 Test Acc: 70.00%
+--- FL Round 93 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 957/1318 (72.6%)
+
+
+client_id: 2, Test acc: 629/1016 (61.9%)
+
+
+client_id: 3, Test acc: 546/952 (57.4%)
+
+
+client_id: 4, Test acc: 629/1017 (61.8%)
+
+
+client_id: 5, Test acc: 644/870 (74.0%)
+
+
+client_id: 6, Test acc: 777/974 (79.8%)
+
+
+client_id: 7, Test acc: 787/1100 (71.5%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Round 93 Test Acc: 69.84%
+--- FL Round 94 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 957/1318 (72.6%)
+
+
+client_id: 2, Test acc: 647/1016 (63.7%)
+
+
+client_id: 3, Test acc: 530/952 (55.7%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 771/974 (79.2%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 677/872 (77.6%)
+
+Round 94 Test Acc: 69.99%
+--- FL Round 95 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 962/1318 (73.0%)
+
+
+client_id: 2, Test acc: 636/1016 (62.6%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 634/1017 (62.3%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 95 Test Acc: 69.77%
+--- FL Round 96 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 642/1016 (63.2%)
+
+
+client_id: 3, Test acc: 533/952 (56.0%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 678/872 (77.8%)
+
+Round 96 Test Acc: 70.01%
+--- FL Round 97 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 97 Test Acc: 70.14%
+--- FL Round 98 ---
+
+client_id: 0, Test acc: 675/939 (71.9%)
+
+
+client_id: 1, Test acc: 962/1318 (73.0%)
+
+
+client_id: 2, Test acc: 642/1016 (63.2%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 98 Test Acc: 70.13%
+--- FL Round 99 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 652/1016 (64.2%)
+
+
+client_id: 3, Test acc: 532/952 (55.9%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 99 Test Acc: 70.16%
+--- FL Round 100 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 780/1100 (70.9%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 100 Test Acc: 70.20%
+--- FL Round 101 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 523/952 (54.9%)
+
+
+client_id: 4, Test acc: 652/1017 (64.1%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 675/872 (77.4%)
+
+Round 101 Test Acc: 69.99%
+--- FL Round 102 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 555/952 (58.3%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 102 Test Acc: 70.18%
+--- FL Round 103 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 660/1016 (65.0%)
+
+
+client_id: 3, Test acc: 515/952 (54.1%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 648/942 (68.8%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 103 Test Acc: 69.82%
+--- FL Round 104 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 532/952 (55.9%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 647/942 (68.7%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 104 Test Acc: 69.82%
+--- FL Round 105 ---
+
+client_id: 0, Test acc: 693/939 (73.8%)
+
+
+client_id: 1, Test acc: 943/1318 (71.5%)
+
+
+client_id: 2, Test acc: 638/1016 (62.8%)
+
+
+client_id: 3, Test acc: 537/952 (56.4%)
+
+
+client_id: 4, Test acc: 637/1017 (62.6%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 777/974 (79.8%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 105 Test Acc: 69.91%
+--- FL Round 106 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 553/952 (58.1%)
+
+
+client_id: 4, Test acc: 641/1017 (63.0%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 106 Test Acc: 70.28%
+--- FL Round 107 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 652/1016 (64.2%)
+
+
+client_id: 3, Test acc: 530/952 (55.7%)
+
+
+client_id: 4, Test acc: 655/1017 (64.4%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 759/1100 (69.0%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 107 Test Acc: 70.06%
+--- FL Round 108 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 641/1016 (63.1%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 780/1100 (70.9%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 108 Test Acc: 70.17%
+--- FL Round 109 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 527/952 (55.4%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 778/1100 (70.7%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 109 Test Acc: 70.16%
+--- FL Round 110 ---
+
+client_id: 0, Test acc: 673/939 (71.7%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 640/1016 (63.0%)
+
+
+client_id: 3, Test acc: 541/952 (56.8%)
+
+
+client_id: 4, Test acc: 639/1017 (62.8%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 110 Test Acc: 70.01%
+--- FL Round 111 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 640/1016 (63.0%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 678/872 (77.8%)
+
+Round 111 Test Acc: 70.22%
+--- FL Round 112 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 963/1318 (73.1%)
+
+
+client_id: 2, Test acc: 664/1016 (65.4%)
+
+
+client_id: 3, Test acc: 516/952 (54.2%)
+
+
+client_id: 4, Test acc: 664/1017 (65.3%)
+
+
+client_id: 5, Test acc: 668/870 (76.8%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 761/1100 (69.2%)
+
+
+client_id: 8, Test acc: 648/942 (68.8%)
+
+
+client_id: 9, Test acc: 675/872 (77.4%)
+
+Round 112 Test Acc: 70.11%
+--- FL Round 113 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 624/1016 (61.4%)
+
+
+client_id: 3, Test acc: 543/952 (57.0%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 783/1100 (71.2%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 113 Test Acc: 69.93%
+--- FL Round 114 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 526/952 (55.3%)
+
+
+client_id: 4, Test acc: 657/1017 (64.6%)
+
+
+client_id: 5, Test acc: 666/870 (76.6%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 765/1100 (69.5%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 114 Test Acc: 70.07%
+--- FL Round 115 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 634/1016 (62.4%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 115 Test Acc: 69.96%
+--- FL Round 116 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 651/1016 (64.1%)
+
+
+client_id: 3, Test acc: 533/952 (56.0%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 680/872 (78.0%)
+
+Round 116 Test Acc: 70.29%
+--- FL Round 117 ---
+
+client_id: 0, Test acc: 668/939 (71.1%)
+
+
+client_id: 1, Test acc: 968/1318 (73.4%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 659/1017 (64.8%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 117 Test Acc: 70.27%
+--- FL Round 118 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 952/1318 (72.2%)
+
+
+client_id: 2, Test acc: 633/1016 (62.3%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 628/1017 (61.8%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 665/942 (70.6%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 118 Test Acc: 70.03%
+--- FL Round 119 ---
+
+client_id: 0, Test acc: 675/939 (71.9%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 661/1016 (65.1%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 658/1017 (64.7%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 119 Test Acc: 70.23%
+--- FL Round 120 ---
+
+client_id: 0, Test acc: 673/939 (71.7%)
+
+
+client_id: 1, Test acc: 960/1318 (72.8%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 780/974 (80.1%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 120 Test Acc: 69.85%
+--- FL Round 121 ---
+
+client_id: 0, Test acc: 672/939 (71.6%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 635/1017 (62.4%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 673/872 (77.2%)
+
+Round 121 Test Acc: 69.93%
+--- FL Round 122 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 978/1318 (74.2%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 528/952 (55.5%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 122 Test Acc: 69.97%
+--- FL Round 123 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 971/1318 (73.7%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 123 Test Acc: 70.05%
+--- FL Round 124 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 971/1318 (73.7%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 641/1017 (63.0%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 777/974 (79.8%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 124 Test Acc: 70.02%
+--- FL Round 125 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 961/1318 (72.9%)
+
+
+client_id: 2, Test acc: 635/1016 (62.5%)
+
+
+client_id: 3, Test acc: 553/952 (58.1%)
+
+
+client_id: 4, Test acc: 636/1017 (62.5%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 759/974 (77.9%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 125 Test Acc: 70.03%
+--- FL Round 126 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 650/1016 (64.0%)
+
+
+client_id: 3, Test acc: 530/952 (55.7%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 126 Test Acc: 69.93%
+--- FL Round 127 ---
+
+client_id: 0, Test acc: 677/939 (72.1%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 641/1016 (63.1%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 127 Test Acc: 70.01%
+--- FL Round 128 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 656/1016 (64.6%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 661/1017 (65.0%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 764/1100 (69.5%)
+
+
+client_id: 8, Test acc: 644/942 (68.4%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 128 Test Acc: 70.12%
+--- FL Round 129 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 959/1318 (72.8%)
+
+
+client_id: 2, Test acc: 633/1016 (62.3%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 758/974 (77.8%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 129 Test Acc: 69.99%
+--- FL Round 130 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 977/1318 (74.1%)
+
+
+client_id: 2, Test acc: 664/1016 (65.4%)
+
+
+client_id: 3, Test acc: 525/952 (55.1%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 771/974 (79.2%)
+
+
+client_id: 7, Test acc: 760/1100 (69.1%)
+
+
+client_id: 8, Test acc: 643/942 (68.3%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 130 Test Acc: 69.98%
+--- FL Round 131 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 649/1016 (63.9%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 131 Test Acc: 70.02%
+--- FL Round 132 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 656/1016 (64.6%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 763/974 (78.3%)
+
+
+client_id: 7, Test acc: 763/1100 (69.4%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 132 Test Acc: 70.07%
+--- FL Round 133 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 771/974 (79.2%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 133 Test Acc: 70.22%
+--- FL Round 134 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 666/942 (70.7%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 134 Test Acc: 70.31%
+--- FL Round 135 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 968/1318 (73.4%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 546/952 (57.4%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 756/974 (77.6%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 135 Test Acc: 70.17%
+--- FL Round 136 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 651/1016 (64.1%)
+
+
+client_id: 3, Test acc: 545/952 (57.2%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 136 Test Acc: 70.23%
+--- FL Round 137 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 973/1318 (73.8%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 137 Test Acc: 70.25%
+--- FL Round 138 ---
+
+client_id: 0, Test acc: 685/939 (72.9%)
+
+
+client_id: 1, Test acc: 951/1318 (72.2%)
+
+
+client_id: 2, Test acc: 642/1016 (63.2%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 659/1017 (64.8%)
+
+
+client_id: 5, Test acc: 669/870 (76.9%)
+
+
+client_id: 6, Test acc: 758/974 (77.8%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 138 Test Acc: 70.25%
+--- FL Round 139 ---
+
+client_id: 0, Test acc: 672/939 (71.6%)
+
+
+client_id: 1, Test acc: 977/1318 (74.1%)
+
+
+client_id: 2, Test acc: 647/1016 (63.7%)
+
+
+client_id: 3, Test acc: 541/952 (56.8%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 139 Test Acc: 70.03%
+--- FL Round 140 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 962/1318 (73.0%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 761/974 (78.1%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 667/942 (70.8%)
+
+
+client_id: 9, Test acc: 671/872 (76.9%)
+
+Round 140 Test Acc: 70.35%
+--- FL Round 141 ---
+
+client_id: 0, Test acc: 676/939 (72.0%)
+
+
+client_id: 1, Test acc: 977/1318 (74.1%)
+
+
+client_id: 2, Test acc: 666/1016 (65.6%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 657/1017 (64.6%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 759/974 (77.9%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 141 Test Acc: 70.29%
+--- FL Round 142 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 629/1016 (61.9%)
+
+
+client_id: 3, Test acc: 547/952 (57.5%)
+
+
+client_id: 4, Test acc: 630/1017 (61.9%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 763/974 (78.3%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 669/942 (71.0%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 142 Test Acc: 69.92%
+--- FL Round 143 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 659/1016 (64.9%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 658/1017 (64.7%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 761/974 (78.1%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 143 Test Acc: 70.28%
+--- FL Round 144 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 647/1016 (63.7%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 651/1017 (64.0%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 760/974 (78.0%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 144 Test Acc: 70.26%
+--- FL Round 145 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 971/1318 (73.7%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 557/952 (58.5%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 763/974 (78.3%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 145 Test Acc: 70.40%
+--- FL Round 146 ---
+
+client_id: 0, Test acc: 685/939 (72.9%)
+
+
+client_id: 1, Test acc: 956/1318 (72.5%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 662/1017 (65.1%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 146 Test Acc: 70.14%
+--- FL Round 147 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 638/1016 (62.8%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 757/974 (77.7%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 147 Test Acc: 69.98%
+--- FL Round 148 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 980/1318 (74.4%)
+
+
+client_id: 2, Test acc: 657/1016 (64.7%)
+
+
+client_id: 3, Test acc: 541/952 (56.8%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 148 Test Acc: 70.31%
+--- FL Round 149 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 666/942 (70.7%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 149 Test Acc: 70.28%
+--- FL Round 150 ---
+
+client_id: 0, Test acc: 674/939 (71.8%)
+
+
+client_id: 1, Test acc: 994/1318 (75.4%)
+
+
+client_id: 2, Test acc: 673/1016 (66.2%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 661/1017 (65.0%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 647/942 (68.7%)
+
+
+client_id: 9, Test acc: 656/872 (75.2%)
+
+Round 150 Test Acc: 70.42%
+--- FL Round 151 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 653/870 (75.1%)
+
+
+client_id: 6, Test acc: 753/974 (77.3%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 151 Test Acc: 70.33%
+--- FL Round 152 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 980/1318 (74.4%)
+
+
+client_id: 2, Test acc: 667/1016 (65.6%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 774/974 (79.5%)
+
+
+client_id: 7, Test acc: 762/1100 (69.3%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 658/872 (75.5%)
+
+Round 152 Test Acc: 70.31%
+--- FL Round 153 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 976/1318 (74.1%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 750/974 (77.0%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 153 Test Acc: 70.18%
+--- FL Round 154 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 980/1318 (74.4%)
+
+
+client_id: 2, Test acc: 651/1016 (64.1%)
+
+
+client_id: 3, Test acc: 547/952 (57.5%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 660/872 (75.7%)
+
+Round 154 Test Acc: 70.21%
+--- FL Round 155 ---
+
+client_id: 0, Test acc: 685/939 (72.9%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 638/1016 (62.8%)
+
+
+client_id: 3, Test acc: 562/952 (59.0%)
+
+
+client_id: 4, Test acc: 641/1017 (63.0%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 779/1100 (70.8%)
+
+
+client_id: 8, Test acc: 670/942 (71.1%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 155 Test Acc: 70.29%
+--- FL Round 156 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 982/1318 (74.5%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 655/1017 (64.4%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 761/974 (78.1%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 647/942 (68.7%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 156 Test Acc: 70.33%
+--- FL Round 157 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 554/952 (58.2%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 157 Test Acc: 70.32%
+--- FL Round 158 ---
+
+client_id: 0, Test acc: 690/939 (73.5%)
+
+
+client_id: 1, Test acc: 977/1318 (74.1%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 552/952 (58.0%)
+
+
+client_id: 4, Test acc: 644/1017 (63.3%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 666/942 (70.7%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 158 Test Acc: 70.41%
+--- FL Round 159 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 656/1017 (64.5%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 659/942 (70.0%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 159 Test Acc: 70.33%
+--- FL Round 160 ---
+
+client_id: 0, Test acc: 681/939 (72.5%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 647/1016 (63.7%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 652/1017 (64.1%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 160 Test Acc: 70.26%
+--- FL Round 161 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 970/1318 (73.6%)
+
+
+client_id: 2, Test acc: 655/1016 (64.5%)
+
+
+client_id: 3, Test acc: 554/952 (58.2%)
+
+
+client_id: 4, Test acc: 656/1017 (64.5%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 649/942 (68.9%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 161 Test Acc: 70.44%
+--- FL Round 162 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 644/1016 (63.4%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 162 Test Acc: 70.36%
+--- FL Round 163 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 656/1016 (64.6%)
+
+
+client_id: 3, Test acc: 552/952 (58.0%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 163 Test Acc: 70.42%
+--- FL Round 164 ---
+
+client_id: 0, Test acc: 692/939 (73.7%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 652/1016 (64.2%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 759/974 (77.9%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 164 Test Acc: 70.33%
+--- FL Round 165 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 640/1016 (63.0%)
+
+
+client_id: 3, Test acc: 571/952 (60.0%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 650/870 (74.7%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 654/942 (69.4%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 165 Test Acc: 70.30%
+--- FL Round 166 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 968/1318 (73.4%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 773/974 (79.4%)
+
+
+client_id: 7, Test acc: 779/1100 (70.8%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 166 Test Acc: 70.44%
+--- FL Round 167 ---
+
+client_id: 0, Test acc: 692/939 (73.7%)
+
+
+client_id: 1, Test acc: 973/1318 (73.8%)
+
+
+client_id: 2, Test acc: 655/1016 (64.5%)
+
+
+client_id: 3, Test acc: 533/952 (56.0%)
+
+
+client_id: 4, Test acc: 649/1017 (63.8%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 672/872 (77.1%)
+
+Round 167 Test Acc: 70.38%
+--- FL Round 168 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 667/1016 (65.6%)
+
+
+client_id: 3, Test acc: 552/952 (58.0%)
+
+
+client_id: 4, Test acc: 658/1017 (64.7%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 777/974 (79.8%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 168 Test Acc: 70.41%
+--- FL Round 169 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 971/1318 (73.7%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 560/952 (58.8%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 761/974 (78.1%)
+
+
+client_id: 7, Test acc: 778/1100 (70.7%)
+
+
+client_id: 8, Test acc: 665/942 (70.6%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 169 Test Acc: 70.40%
+--- FL Round 170 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 984/1318 (74.7%)
+
+
+client_id: 2, Test acc: 669/1016 (65.8%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 659/1017 (64.8%)
+
+
+client_id: 5, Test acc: 658/870 (75.6%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 650/942 (69.0%)
+
+
+client_id: 9, Test acc: 656/872 (75.2%)
+
+Round 170 Test Acc: 70.34%
+--- FL Round 171 ---
+
+client_id: 0, Test acc: 693/939 (73.8%)
+
+
+client_id: 1, Test acc: 957/1318 (72.6%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 557/952 (58.5%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 651/870 (74.8%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 171 Test Acc: 70.28%
+--- FL Round 172 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 555/952 (58.3%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 650/942 (69.0%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 172 Test Acc: 70.14%
+--- FL Round 173 ---
+
+client_id: 0, Test acc: 691/939 (73.6%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 645/1016 (63.5%)
+
+
+client_id: 3, Test acc: 556/952 (58.4%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 647/870 (74.4%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 173 Test Acc: 70.28%
+--- FL Round 174 ---
+
+client_id: 0, Test acc: 687/939 (73.2%)
+
+
+client_id: 1, Test acc: 973/1318 (73.8%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 562/952 (59.0%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 772/1100 (70.2%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 174 Test Acc: 70.44%
+--- FL Round 175 ---
+
+client_id: 0, Test acc: 673/939 (71.7%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 659/1016 (64.9%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 661/1017 (65.0%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 778/974 (79.9%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 646/942 (68.6%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 175 Test Acc: 70.38%
+--- FL Round 176 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 648/1016 (63.8%)
+
+
+client_id: 3, Test acc: 555/952 (58.3%)
+
+
+client_id: 4, Test acc: 643/1017 (63.2%)
+
+
+client_id: 5, Test acc: 655/870 (75.3%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 668/942 (70.9%)
+
+
+client_id: 9, Test acc: 661/872 (75.8%)
+
+Round 176 Test Acc: 70.31%
+--- FL Round 177 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 660/1016 (65.0%)
+
+
+client_id: 3, Test acc: 540/952 (56.7%)
+
+
+client_id: 4, Test acc: 659/1017 (64.8%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 664/872 (76.1%)
+
+Round 177 Test Acc: 70.49%
+--- FL Round 178 ---
+
+client_id: 0, Test acc: 692/939 (73.7%)
+
+
+client_id: 1, Test acc: 958/1318 (72.7%)
+
+
+client_id: 2, Test acc: 651/1016 (64.1%)
+
+
+client_id: 3, Test acc: 569/952 (59.8%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 652/870 (74.9%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 782/1100 (71.1%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 178 Test Acc: 70.53%
+--- FL Round 179 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 964/1318 (73.1%)
+
+
+client_id: 2, Test acc: 656/1016 (64.6%)
+
+
+client_id: 3, Test acc: 547/952 (57.5%)
+
+
+client_id: 4, Test acc: 656/1017 (64.5%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 669/872 (76.7%)
+
+Round 179 Test Acc: 70.53%
+--- FL Round 180 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 565/952 (59.3%)
+
+
+client_id: 4, Test acc: 647/1017 (63.6%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 757/974 (77.7%)
+
+
+client_id: 7, Test acc: 778/1100 (70.7%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 659/872 (75.6%)
+
+Round 180 Test Acc: 70.38%
+--- FL Round 181 ---
+
+client_id: 0, Test acc: 678/939 (72.2%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 542/952 (56.9%)
+
+
+client_id: 4, Test acc: 662/1017 (65.1%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 656/942 (69.6%)
+
+
+client_id: 9, Test acc: 668/872 (76.6%)
+
+Round 181 Test Acc: 70.29%
+--- FL Round 182 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 973/1318 (73.8%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 564/952 (59.2%)
+
+
+client_id: 4, Test acc: 645/1017 (63.4%)
+
+
+client_id: 5, Test acc: 657/870 (75.5%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 656/872 (75.2%)
+
+Round 182 Test Acc: 70.35%
+--- FL Round 183 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 660/1016 (65.0%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 666/872 (76.4%)
+
+Round 183 Test Acc: 70.30%
+--- FL Round 184 ---
+
+client_id: 0, Test acc: 685/939 (72.9%)
+
+
+client_id: 1, Test acc: 965/1318 (73.2%)
+
+
+client_id: 2, Test acc: 639/1016 (62.9%)
+
+
+client_id: 3, Test acc: 564/952 (59.2%)
+
+
+client_id: 4, Test acc: 641/1017 (63.0%)
+
+
+client_id: 5, Test acc: 660/870 (75.9%)
+
+
+client_id: 6, Test acc: 765/974 (78.5%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 664/942 (70.5%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 184 Test Acc: 70.27%
+--- FL Round 185 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 983/1318 (74.6%)
+
+
+client_id: 2, Test acc: 663/1016 (65.3%)
+
+
+client_id: 3, Test acc: 537/952 (56.4%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 768/974 (78.9%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 655/942 (69.5%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 185 Test Acc: 70.29%
+--- FL Round 186 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 666/1016 (65.6%)
+
+
+client_id: 3, Test acc: 551/952 (57.9%)
+
+
+client_id: 4, Test acc: 660/1017 (64.9%)
+
+
+client_id: 5, Test acc: 654/870 (75.2%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 775/1100 (70.5%)
+
+
+client_id: 8, Test acc: 653/942 (69.3%)
+
+
+client_id: 9, Test acc: 659/872 (75.6%)
+
+Round 186 Test Acc: 70.42%
+--- FL Round 187 ---
+
+client_id: 0, Test acc: 682/939 (72.6%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 646/1016 (63.6%)
+
+
+client_id: 3, Test acc: 545/952 (57.2%)
+
+
+client_id: 4, Test acc: 642/1017 (63.1%)
+
+
+client_id: 5, Test acc: 659/870 (75.7%)
+
+
+client_id: 6, Test acc: 771/974 (79.2%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 657/942 (69.7%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 187 Test Acc: 70.03%
+--- FL Round 188 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 984/1318 (74.7%)
+
+
+client_id: 2, Test acc: 659/1016 (64.9%)
+
+
+client_id: 3, Test acc: 538/952 (56.5%)
+
+
+client_id: 4, Test acc: 655/1017 (64.4%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 770/974 (79.1%)
+
+
+client_id: 7, Test acc: 766/1100 (69.6%)
+
+
+client_id: 8, Test acc: 652/942 (69.2%)
+
+
+client_id: 9, Test acc: 659/872 (75.6%)
+
+Round 188 Test Acc: 70.32%
+--- FL Round 189 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 973/1318 (73.8%)
+
+
+client_id: 2, Test acc: 643/1016 (63.3%)
+
+
+client_id: 3, Test acc: 555/952 (58.3%)
+
+
+client_id: 4, Test acc: 650/1017 (63.9%)
+
+
+client_id: 5, Test acc: 656/870 (75.4%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 660/872 (75.7%)
+
+Round 189 Test Acc: 70.17%
+--- FL Round 190 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 984/1318 (74.7%)
+
+
+client_id: 2, Test acc: 653/1016 (64.3%)
+
+
+client_id: 3, Test acc: 539/952 (56.6%)
+
+
+client_id: 4, Test acc: 648/1017 (63.7%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 776/974 (79.7%)
+
+
+client_id: 7, Test acc: 769/1100 (69.9%)
+
+
+client_id: 8, Test acc: 651/942 (69.1%)
+
+
+client_id: 9, Test acc: 662/872 (75.9%)
+
+Round 190 Test Acc: 70.36%
+--- FL Round 191 ---
+
+client_id: 0, Test acc: 680/939 (72.4%)
+
+
+client_id: 1, Test acc: 976/1318 (74.1%)
+
+
+client_id: 2, Test acc: 640/1016 (63.0%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 641/1017 (63.0%)
+
+
+client_id: 5, Test acc: 664/870 (76.3%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 191 Test Acc: 70.29%
+--- FL Round 192 ---
+
+client_id: 0, Test acc: 683/939 (72.7%)
+
+
+client_id: 1, Test acc: 974/1318 (73.9%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 548/952 (57.6%)
+
+
+client_id: 4, Test acc: 655/1017 (64.4%)
+
+
+client_id: 5, Test acc: 667/870 (76.7%)
+
+
+client_id: 6, Test acc: 764/974 (78.4%)
+
+
+client_id: 7, Test acc: 768/1100 (69.8%)
+
+
+client_id: 8, Test acc: 658/942 (69.9%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 192 Test Acc: 70.46%
+--- FL Round 193 ---
+
+client_id: 0, Test acc: 688/939 (73.3%)
+
+
+client_id: 1, Test acc: 968/1318 (73.4%)
+
+
+client_id: 2, Test acc: 636/1016 (62.6%)
+
+
+client_id: 3, Test acc: 553/952 (58.1%)
+
+
+client_id: 4, Test acc: 638/1017 (62.7%)
+
+
+client_id: 5, Test acc: 661/870 (76.0%)
+
+
+client_id: 6, Test acc: 779/974 (80.0%)
+
+
+client_id: 7, Test acc: 774/1100 (70.4%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 193 Test Acc: 70.31%
+--- FL Round 194 ---
+
+client_id: 0, Test acc: 684/939 (72.8%)
+
+
+client_id: 1, Test acc: 979/1318 (74.3%)
+
+
+client_id: 2, Test acc: 658/1016 (64.8%)
+
+
+client_id: 3, Test acc: 543/952 (57.0%)
+
+
+client_id: 4, Test acc: 656/1017 (64.5%)
+
+
+client_id: 5, Test acc: 666/870 (76.6%)
+
+
+client_id: 6, Test acc: 772/974 (79.3%)
+
+
+client_id: 7, Test acc: 777/1100 (70.6%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 194 Test Acc: 70.68%
+--- FL Round 195 ---
+
+client_id: 0, Test acc: 689/939 (73.4%)
+
+
+client_id: 1, Test acc: 975/1318 (74.0%)
+
+
+client_id: 2, Test acc: 654/1016 (64.4%)
+
+
+client_id: 3, Test acc: 549/952 (57.7%)
+
+
+client_id: 4, Test acc: 646/1017 (63.5%)
+
+
+client_id: 5, Test acc: 665/870 (76.4%)
+
+
+client_id: 6, Test acc: 766/974 (78.6%)
+
+
+client_id: 7, Test acc: 767/1100 (69.7%)
+
+
+client_id: 8, Test acc: 663/942 (70.4%)
+
+
+client_id: 9, Test acc: 663/872 (76.0%)
+
+Round 195 Test Acc: 70.41%
+--- FL Round 196 ---
+
+client_id: 0, Test acc: 679/939 (72.3%)
+
+
+client_id: 1, Test acc: 972/1318 (73.7%)
+
+
+client_id: 2, Test acc: 649/1016 (63.9%)
+
+
+client_id: 3, Test acc: 550/952 (57.8%)
+
+
+client_id: 4, Test acc: 653/1017 (64.2%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 762/974 (78.2%)
+
+
+client_id: 7, Test acc: 776/1100 (70.5%)
+
+
+client_id: 8, Test acc: 660/942 (70.1%)
+
+
+client_id: 9, Test acc: 665/872 (76.3%)
+
+Round 196 Test Acc: 70.32%
+--- FL Round 197 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 966/1318 (73.3%)
+
+
+client_id: 2, Test acc: 649/1016 (63.9%)
+
+
+client_id: 3, Test acc: 552/952 (58.0%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 769/974 (79.0%)
+
+
+client_id: 7, Test acc: 773/1100 (70.3%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 667/872 (76.5%)
+
+Round 197 Test Acc: 70.47%
+--- FL Round 198 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 967/1318 (73.4%)
+
+
+client_id: 2, Test acc: 656/1016 (64.6%)
+
+
+client_id: 3, Test acc: 547/952 (57.5%)
+
+
+client_id: 4, Test acc: 654/1017 (64.3%)
+
+
+client_id: 5, Test acc: 663/870 (76.2%)
+
+
+client_id: 6, Test acc: 767/974 (78.7%)
+
+
+client_id: 7, Test acc: 770/1100 (70.0%)
+
+
+client_id: 8, Test acc: 662/942 (70.3%)
+
+
+client_id: 9, Test acc: 670/872 (76.8%)
+
+Round 198 Test Acc: 70.48%
+--- FL Round 199 ---
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+
+client_id: 2, Test acc: 655/1016 (64.5%)
+
+
+client_id: 3, Test acc: 546/952 (57.4%)
+
+
+client_id: 4, Test acc: 652/1017 (64.1%)
+
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Round 199 Test Acc: 70.57%
+
+client_id: 0, Test acc: 686/939 (73.1%)
+
+Client 0 Test Acc: 73.06%
+
+client_id: 1, Test acc: 969/1318 (73.5%)
+
+Client 1 Test Acc: 73.52%
+
+client_id: 2, Test acc: 655/1016 (64.5%)
+
+Client 2 Test Acc: 64.47%
+
+client_id: 3, Test acc: 546/952 (57.4%)
+
+Client 3 Test Acc: 57.35%
+
+client_id: 4, Test acc: 652/1017 (64.1%)
+
+Client 4 Test Acc: 64.11%
+
+client_id: 5, Test acc: 662/870 (76.1%)
+
+Client 5 Test Acc: 76.09%
+
+client_id: 6, Test acc: 775/974 (79.6%)
+
+Client 6 Test Acc: 79.57%
+
+client_id: 7, Test acc: 771/1100 (70.1%)
+
+Client 7 Test Acc: 70.09%
+
+client_id: 8, Test acc: 661/942 (70.2%)
+
+Client 8 Test Acc: 70.17%
+
+client_id: 9, Test acc: 674/872 (77.3%)
+
+Client 9 Test Acc: 77.29%
+#######Max Acc: 79.57%
+#######Final Average Acc: 70.57%
+#######Total Run Time: 10024.05 seconds
+#######Client total wait time: 29621.03 seconds

@@ -1,0 +1,291 @@
+Running FedAvg... dataset=mnist, model=MNISTNet
+fedAvg Start Training...
+--- FL Round 0 ---
+
+client_id: 0, Test acc: 61/1056 (5.8%)
+
+
+client_id: 1, Test acc: 206/987 (20.9%)
+
+
+client_id: 2, Test acc: 521/1058 (49.2%)
+
+
+client_id: 3, Test acc: 56/743 (7.5%)
+
+
+client_id: 4, Test acc: 55/1158 (4.7%)
+
+
+client_id: 5, Test acc: 50/1038 (4.8%)
+
+
+client_id: 6, Test acc: 104/757 (13.7%)
+
+
+client_id: 7, Test acc: 31/1057 (2.9%)
+
+
+client_id: 8, Test acc: 251/1259 (19.9%)
+
+
+client_id: 9, Test acc: 14/887 (1.6%)
+
+Round 0 Test Acc: 13.12%
+--- FL Round 1 ---
+
+client_id: 0, Test acc: 889/1056 (84.2%)
+
+
+client_id: 1, Test acc: 832/987 (84.3%)
+
+
+client_id: 2, Test acc: 913/1058 (86.3%)
+
+
+client_id: 3, Test acc: 654/743 (88.0%)
+
+
+client_id: 4, Test acc: 996/1158 (86.0%)
+
+
+client_id: 5, Test acc: 863/1038 (83.1%)
+
+
+client_id: 6, Test acc: 682/757 (90.1%)
+
+
+client_id: 7, Test acc: 905/1057 (85.6%)
+
+
+client_id: 8, Test acc: 1053/1259 (83.6%)
+
+
+client_id: 9, Test acc: 754/887 (85.0%)
+
+Round 1 Test Acc: 85.63%
+--- FL Round 2 ---
+
+client_id: 0, Test acc: 988/1056 (93.6%)
+
+
+client_id: 1, Test acc: 887/987 (89.9%)
+
+
+client_id: 2, Test acc: 933/1058 (88.2%)
+
+
+client_id: 3, Test acc: 667/743 (89.8%)
+
+
+client_id: 4, Test acc: 1069/1158 (92.3%)
+
+
+client_id: 5, Test acc: 964/1038 (92.9%)
+
+
+client_id: 6, Test acc: 692/757 (91.4%)
+
+
+client_id: 7, Test acc: 968/1057 (91.6%)
+
+
+client_id: 8, Test acc: 1142/1259 (90.7%)
+
+
+client_id: 9, Test acc: 814/887 (91.8%)
+
+Round 2 Test Acc: 91.20%
+--- FL Round 3 ---
+
+client_id: 0, Test acc: 1000/1056 (94.7%)
+
+
+client_id: 1, Test acc: 910/987 (92.2%)
+
+
+client_id: 2, Test acc: 970/1058 (91.7%)
+
+
+client_id: 3, Test acc: 684/743 (92.1%)
+
+
+client_id: 4, Test acc: 1084/1158 (93.6%)
+
+
+client_id: 5, Test acc: 980/1038 (94.4%)
+
+
+client_id: 6, Test acc: 706/757 (93.3%)
+
+
+client_id: 7, Test acc: 986/1057 (93.3%)
+
+
+client_id: 8, Test acc: 1161/1259 (92.2%)
+
+
+client_id: 9, Test acc: 827/887 (93.2%)
+
+Round 3 Test Acc: 93.07%
+--- FL Round 4 ---
+
+client_id: 0, Test acc: 1008/1056 (95.5%)
+
+
+client_id: 1, Test acc: 922/987 (93.4%)
+
+
+client_id: 2, Test acc: 989/1058 (93.5%)
+
+
+client_id: 3, Test acc: 694/743 (93.4%)
+
+
+client_id: 4, Test acc: 1094/1158 (94.5%)
+
+
+client_id: 5, Test acc: 993/1038 (95.7%)
+
+
+client_id: 6, Test acc: 713/757 (94.2%)
+
+
+client_id: 7, Test acc: 999/1057 (94.5%)
+
+
+client_id: 8, Test acc: 1182/1259 (93.9%)
+
+
+client_id: 9, Test acc: 836/887 (94.3%)
+
+Round 4 Test Acc: 94.27%
+--- FL Round 5 ---
+
+client_id: 0, Test acc: 1024/1056 (97.0%)
+
+
+client_id: 1, Test acc: 936/987 (94.8%)
+
+
+client_id: 2, Test acc: 1004/1058 (94.9%)
+
+
+client_id: 3, Test acc: 702/743 (94.5%)
+
+
+client_id: 4, Test acc: 1107/1158 (95.6%)
+
+
+client_id: 5, Test acc: 1003/1038 (96.6%)
+
+
+client_id: 6, Test acc: 722/757 (95.4%)
+
+
+client_id: 7, Test acc: 1009/1057 (95.5%)
+
+
+client_id: 8, Test acc: 1198/1259 (95.2%)
+
+
+client_id: 9, Test acc: 842/887 (94.9%)
+
+Round 5 Test Acc: 95.43%
+--- FL Round 6 ---
+
+client_id: 0, Test acc: 1028/1056 (97.3%)
+
+
+client_id: 1, Test acc: 944/987 (95.6%)
+
+
+client_id: 2, Test acc: 1010/1058 (95.5%)
+
+
+client_id: 3, Test acc: 711/743 (95.7%)
+
+
+client_id: 4, Test acc: 1117/1158 (96.5%)
+
+
+client_id: 5, Test acc: 1007/1038 (97.0%)
+
+
+client_id: 6, Test acc: 720/757 (95.1%)
+
+
+client_id: 7, Test acc: 1020/1057 (96.5%)
+
+
+client_id: 8, Test acc: 1211/1259 (96.2%)
+
+
+client_id: 9, Test acc: 849/887 (95.7%)
+
+Round 6 Test Acc: 96.11%
+--- FL Round 7 ---
+
+client_id: 0, Test acc: 1029/1056 (97.4%)
+
+
+client_id: 1, Test acc: 946/987 (95.8%)
+
+
+client_id: 2, Test acc: 1014/1058 (95.8%)
+
+
+client_id: 3, Test acc: 714/743 (96.1%)
+
+
+client_id: 4, Test acc: 1121/1158 (96.8%)
+
+
+client_id: 5, Test acc: 1006/1038 (96.9%)
+
+
+client_id: 6, Test acc: 721/757 (95.2%)
+
+
+client_id: 7, Test acc: 1024/1057 (96.9%)
+
+
+client_id: 8, Test acc: 1216/1259 (96.6%)
+
+
+client_id: 9, Test acc: 851/887 (95.9%)
+
+Round 7 Test Acc: 96.36%
+--- FL Round 8 ---
+
+client_id: 0, Test acc: 1034/1056 (97.9%)
+
+
+client_id: 1, Test acc: 952/987 (96.5%)
+
+
+client_id: 2, Test acc: 1023/1058 (96.7%)
+
+
+client_id: 3, Test acc: 717/743 (96.5%)
+
+
+client_id: 4, Test acc: 1119/1158 (96.6%)
+
+
+client_id: 5, Test acc: 1010/1038 (97.3%)
+
+
+client_id: 6, Test acc: 728/757 (96.2%)
+
+
+client_id: 7, Test acc: 1024/1057 (96.9%)
+
+
+client_id: 8, Test acc: 1217/1259 (96.7%)
+
+
+client_id: 9, Test acc: 852/887 (96.1%)
+
+Round 8 Test Acc: 96.73%
+--- FL Round 9 ---

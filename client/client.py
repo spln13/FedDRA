@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from models.mini_vgg import MiniVGG
+from models.mnist_net import MNISTNet
 from dataset.fed_dirichlet_io import NpzArrayDataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -17,7 +18,7 @@ class Client(object):
         self.id = client_id
         self.device = device
         self.model_name = model_name
-        self.dataset_name = dataset_name
+        self.dataset_name = str(dataset_name).strip().lower()
         self.training_intensity = training_intensity
         self.batch_size = batch_size
         self.s = s
@@ -32,6 +33,12 @@ class Client(object):
         self.client_do_times = []  # client运行时间数组，包括剪枝时间
         self.client_total_do_time = 0.
         self.batch_norm = batch_norm
+
+    def _model_key(self):
+        return str(self.model_name).strip().lower()
+
+    def _is_mnist_like(self):
+        return self.dataset_name in ("mnist", "emnist_noniid")
 
     def feddra_do(self):
         # 每一轮联邦学习循环，client的do，由主程序调用，要做的事情
@@ -72,11 +79,20 @@ class Client(object):
         return acc, total_time, entropy, local_data_size, self.id, self.cur_pruning_rate, self.training_intensity, avg_loss, total_time + prune_time
 
     def _build_model(self, batch_norm=True):
-        if self.model_name == 'MiniVGG':
-            model = MiniVGG(dataset=self.dataset_name, batch_norm=batch_norm)
-            return model
-        else:
-            raise NotImplementedError
+        key = self._model_key()
+        if key in ("minivgg", "mini_vgg"):
+            return MiniVGG(dataset=self.dataset_name, batch_norm=batch_norm)
+        if key in ("mnistnet", "mnist_net"):
+            return MNISTNet(dataset=self.dataset_name, batch_norm=batch_norm)
+        raise NotImplementedError(f"Unsupported model_name: {self.model_name}")
+
+    def _build_model_from_cfg(self, cfg, batch_norm=True):
+        key = self._model_key()
+        if key in ("minivgg", "mini_vgg"):
+            return MiniVGG(cfg=cfg, dataset=self.dataset_name, batch_norm=batch_norm).to(self.device)
+        if key in ("mnistnet", "mnist_net"):
+            return MNISTNet(cfg=cfg, dataset=self.dataset_name, batch_norm=batch_norm).to(self.device)
+        raise NotImplementedError(f"Unsupported model_name: {self.model_name}")
 
     def load_model(self):
         return self.model
@@ -114,6 +130,8 @@ class Client(object):
         optimizer = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, weight_decay=1e-4)
         criterion = nn.CrossEntropyLoss()
         losses = []  # ✅ 用于存储所有batch的loss
+        correct_train = 0
+        seen_train = 0
         s = self.s
         start_time = time.time()  # 记录训练开始时间
 
@@ -134,6 +152,9 @@ class Client(object):
                 output = model(data)
                 loss = criterion(output, target)
                 losses.append(loss.item())  # ✅ 记录每个batch的loss
+                pred = output.argmax(dim=1)
+                correct_train += int(pred.eq(target).sum().item())
+                seen_train += int(target.numel())
 
                 loss.backward()
                 if sr:  # update batchnorm
@@ -148,6 +169,7 @@ class Client(object):
 
         # ✅ 计算平均loss
         avg_loss = sum(losses) / len(losses) if len(losses) > 0 else 0.0
+        train_acc = 100.0 * correct_train / max(seen_train, 1)
         print(f"[client{self.id}] Average training loss: {avg_loss:.6f}")
 
         # ✅ 计算信息熵（取前2个batch做近似）
@@ -160,7 +182,7 @@ class Client(object):
 
         self.model = model
         # ✅ 返回 acc、训练时间、平均loss、信息熵、本地数据量Di
-        return 0., total_time, avg_loss, entropy, local_data_size
+        return train_acc, total_time, avg_loss, entropy, local_data_size
 
     def first_evaluate(self):
         """
@@ -213,6 +235,7 @@ class Client(object):
                                                                     100. * correct / len(
                                                                         test_loader.dataset)))
         acc = 100. * correct / len(test_loader.dataset)
+        self.last_acc = float(acc)
         return acc
 
     def prune(self, model, pruning_rate):
@@ -265,9 +288,10 @@ class Client(object):
                 new_cfg.append('M')
         model.cfg = new_cfg
         model.mask = new_cfg_mask
-        new_model = MiniVGG(cfg=new_cfg, dataset=self.dataset_name).to(self.device)
+        new_model = self._build_model_from_cfg(cfg=new_cfg, batch_norm=self.batch_norm)
         layer_id_in_cfg = 0
-        start_mask = torch.ones(3)  # 当前layer_id的层开始时的通道 cifar初始三个输入通道全部保留
+        in_ch = 1 if self._is_mnist_like() else 3
+        start_mask = torch.ones(in_ch)  # 当前layer_id的层开始时的通道
         end_mask = new_cfg_mask[layer_id_in_cfg]  # 当前layer_id的层结束时的通道
         for [m0, m1] in zip(model.modules(), new_model.modules()):
             if isinstance(m0, nn.BatchNorm2d):
@@ -338,7 +362,7 @@ class Client(object):
         full_model = self._build_model(self.batch_norm)
         mask = model.mask
         layer_idx_in_mask = 0
-        if self.dataset_name == 'MNIST':
+        if self._is_mnist_like():
             start_mask = torch.ones(1).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
         else:
             start_mask = torch.ones(3).bool()  # 开始的mask是输入图片的通道, 为rgb三通道 若是MNIST则改为1通道
@@ -421,6 +445,7 @@ class Client(object):
                                                                     100. * correct / len(
                                                                         test_loader.dataset)))
         acc = 100. * correct / len(test_loader.dataset)
+        self.last_acc = float(acc)
         return acc
 
     def _npz_path(self, split: str) -> str:
@@ -485,6 +510,27 @@ class Client(object):
         """
         start_all = time.time()
 
+        def _entropy_from_logits(logits: torch.Tensor) -> torch.Tensor:
+            prob = F.softmax(logits, dim=-1).clamp_min(1e-12)
+            return -(prob * prob.log()).sum(dim=-1)
+
+        @torch.no_grad()
+        def _predictive_entropy_loader(model: torch.nn.Module,
+                                       loader,
+                                       device: str = "cpu",
+                                       max_batches: int = 2) -> float:
+            model.eval()
+            total_H, total_n = 0.0, 0
+            for b_idx, (xb, _) in enumerate(loader):
+                xb = xb.to(device)
+                logits = model(xb)
+                H_b = _entropy_from_logits(logits)
+                total_H += float(H_b.sum().item())
+                total_n += xb.shape[0]
+                if (max_batches is not None) and (b_idx + 1 >= max_batches):
+                    break
+            return total_H / max(total_n, 1)
+
         model = self.model.to(self.device)
         model.train()
 
@@ -493,11 +539,14 @@ class Client(object):
 
         local_epochs = int(epochs if epochs is not None else max(1, int(getattr(self, "training_intensity", 1))))
         train_loader = self.load_train_data()
+        local_dataset = getattr(train_loader, "dataset", None)
+        local_data_size = len(local_dataset) if local_dataset is not None else 0
 
         # 把 server 参数搬到本地 device，做一次快照（无梯度）
         server_params = {k: v.detach().to(self.device) for k, v in server_state_dict.items() if k in model.state_dict()}
 
         loss_meter, step_cnt = 0.0, 0
+        correct_train, seen_train = 0, 0
         tic = time.time()
         for ep in range(local_epochs):
             for x, y in train_loader:
@@ -505,6 +554,9 @@ class Client(object):
                 optimizer.zero_grad()
                 logits = model(x)
                 ce = F.cross_entropy(logits, y)
+                pred = logits.argmax(dim=1)
+                correct_train += int(pred.eq(y).sum().item())
+                seen_train += int(y.numel())
 
                 # FedProx proximal term： (μ/2) * Σ ||w - w_t||^2
                 prox = 0.0
@@ -519,16 +571,16 @@ class Client(object):
                 loss_meter += ce.item()  # 记录纯分类损失，和你日志里“avg_loss”口径一致
                 step_cnt += 1
 
-        do_time = time.time() - tic
         avg_loss = loss_meter / max(step_cnt, 1)
+        acc = 100.0 * correct_train / max(seen_train, 1)
+        entropy = _predictive_entropy_loader(model, train_loader, device=self.device, max_batches=2)
 
-        # 评估 + 指标
-        local_data_size = int(getattr(self, "local_data_size", 0))
-        total_time = time.time() - start_all
-        # time mock一下
-        # 为了与原有日志一致，这两个字段仍然回传
+        total_time = self.mock_time_delay(time.time() - start_all)
         client_last_pruning_rate = float(getattr(self, "cur_pruning_rate", 0.0))
         client_epochs = int(local_epochs)
+        self.model = model
+        self.client_do_times.append(total_time)
+        self.client_total_do_time += total_time
 
         print(f"[client{self.id}] Average training loss: {avg_loss:.6f}")
         print(f"[client{self.id}] Predictive entropy: {entropy:.6f}")
@@ -543,7 +595,7 @@ class Client(object):
               f"training_intensity: {client_epochs}, prox_mu: {mu}, prune_time: 0.0")
 
         return (acc, total_time, entropy, local_data_size, int(self.id),
-                client_last_pruning_rate, client_epochs, avg_loss, do_time)
+                client_last_pruning_rate, client_epochs, avg_loss, total_time)
 
 
     def mock_time_delay(self, total_time):
